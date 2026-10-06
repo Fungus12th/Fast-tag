@@ -1,0 +1,16 @@
+# Project Documents
+FASTag_DA1_Report.docx
+PPT.pptx
+extracted_content.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Virtual Environment
+.venv/

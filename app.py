@@ -1,4 +1,4 @@
-﻿"""
+"""
 FASTag DA-2 â€” Flask Web Server (app.py)
 Central hub: serves the dashboard, exposes REST APIs for ingestion, stats, chaos mode,
 and deduplication control.
@@ -40,6 +40,12 @@ chaos_lock = threading.Lock()
 def index():
     """Serve the main dashboard page."""
     return render_template("index.html")
+
+@app.route("/database")
+def database():
+    """Serve the database view page."""
+    return render_template("database.html")
+
 
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -259,6 +265,12 @@ def chaos_status():
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # HEALTH CHECK
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@app.route("/api/database/tail", methods=["GET"])
+def database_tail():
+    pings = storage.get_recent_pings(window_seconds=60)[:100]
+    return jsonify({"data": pings})
+
 @app.route("/api/health", methods=["GET"])
 def health():
     """Health check endpoint for network verification."""

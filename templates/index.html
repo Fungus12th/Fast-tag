@@ -6,7 +6,7 @@
     <title>FASTag Live Ingestion Dashboard</title>
     
     <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,17 +17,17 @@
         /* CSS CUSTOM PROPERTIES - Extracted Palette */
         :root {
             /* Exact Colors from provided image */
-            --color-1: #0a1726; /* Dark Blue */
-            --color-2: #16304a; /* Mid Blue */
-            --color-3: #9cc3e6; /* Light Blue */
-            --color-4: #ead3b5; /* Beige */
-            --color-5: #f3efe6; /* Off-white */
+            --color-1: #0b4a22; /* Dark Blue */
+            --color-2: #d4edda; /* Mid Blue */
+            --color-3: #0b4a22; /* Light Blue */
+            --color-4: #0b4a22; /* Beige */
+            --color-5: #0b4a22; /* Off-white */
 
             --bg-primary: var(--color-1);
             --bg-card: var(--color-2);
-            --bg-card-hover: #3b7396;
+            --bg-card-hover: #c3e6cb;
             --border: var(--color-3);
-            --border-light: rgba(156, 195, 230, 0.4);
+            --border-light: #0b4a22;
             --text-primary: var(--color-5);
             --text-muted: var(--color-4);
             --text-dim: var(--color-4);
@@ -44,13 +44,11 @@
         /* RESET & BODY */
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: var(--font-body);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-            position: relative;
-        }
+    background-color: #d4edda;
+    background-image: radial-gradient(#a3c9ae 2px, transparent 2px);
+    background-size: 30px 30px;
+    color: #0b4a22;
+}
 
         /* DASHBOARD LAYOUT */
         .dashboard {
@@ -94,26 +92,25 @@
         
         /* CARD BASE */
         .card {
-            background: var(--bg-card);
-            border: 2px solid var(--border-light);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: border-color 0.3s, background-color 0.3s;
-        }
+    background: #d4edda;
+    border: 3px solid #0b4a22;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.3s, background-color 0.3s;
+}
         .card:hover {
             border-color: var(--color-3);
             background: var(--bg-card-hover);
         }
         .card-title {
-            font-family: var(--font-display);
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            font-size: 1.1rem;
-            
-            color: var(--color-4);
-            text-transform: uppercase;
-            margin-bottom: 1rem;
-        }
+    color: #0b4a22;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+}
 
         /* HERO COUNTERS */
         .hero-row {
@@ -131,7 +128,9 @@
             line-height: 1.1;
             margin-top: 0.25rem;
         }
-        .hero-value.primary { color: var(--color-3); }
+        .hero-value.primary {
+    color: #0b4a22;
+}
         .hero-value.highlight { color: var(--color-4); }
         .hero-sub {
             font-family: var(--font-body);
@@ -362,7 +361,7 @@
             width: 150px;
             height: 6px;
             border-radius: 3px;
-            background: var(--color-1);
+            background: #0b4a22;
             outline: none;
             border: 1px solid var(--border-light);
         }
@@ -396,12 +395,10 @@
             font-weight: 600;
             letter-spacing: 0.5px;
             padding: 0.7rem 1.4rem;
-            
             font-size: 1rem;
-            
-            background: var(--color-1);
-            color: var(--color-4);
-            border: 2px solid var(--color-3);
+            background: #d4edda;
+            color: #0b4a22;
+            border: 2px solid #0b4a22;
             border-radius: 8px;
             cursor: pointer;
             text-transform: uppercase;
@@ -409,8 +406,8 @@
             transition: all 0.3s;
         }
         #trigger-dedup-btn:hover {
-            background: var(--color-3);
-            color: var(--color-1);
+            background: #c3e6cb;
+            color: #0b4a22;
         }
         #trigger-dedup-btn:disabled {
             opacity: 0.5;
@@ -428,12 +425,13 @@
         .event-feed::-webkit-scrollbar-track { background: var(--bg-card); }
         .event-feed::-webkit-scrollbar-thumb { background: var(--color-3); border-radius: 3px; }
         .event-row {
-            padding: 0.5rem 0;
-            border-bottom: 1px solid var(--border-light);
-            display: flex;
-            gap: 0.8rem;
-            flex-wrap: wrap;
-        }
+    padding: 12px;
+    border-bottom: 1px solid #0b4a22;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    color: #0b4a22;
+}
         .event-row .ev-tag   { color: var(--color-5); font-weight: 500; }
         .event-row .ev-plaza { color: var(--color-3); font-weight: 500; }
         .event-row .ev-rssi  { color: var(--color-4); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
@@ -478,7 +476,7 @@
         }
         
         /* Leaflet Overrides */
-        .leaflet-container { background: var(--color-1);  }
+        .leaflet-container { background: #0b4a22;  }
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background: var(--color-2);
             color: var(--color-5);
@@ -504,6 +502,7 @@
         <!-- HEADER -->
         <header class="header">
             
+            <a href="/database" style="color: #0b4a22; background-color: #d4edda; text-decoration: none; font-size: 1rem; border: 2px solid #0b4a22; padding: 8px 16px; border-radius: 6px; font-weight: bold; position: absolute; right: 20px; top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000;">View Live Database</a>
             <h1>FASTag Live Ingestion Dashboard</h1>
             <p class="subtitle">High-Frequency Ingestion &amp; Deduplication Demo</p>
             <div class="live-clock" id="live-clock">--:--:--</div>
@@ -584,7 +583,7 @@
 
         <!-- CONTROLS BAR -->
         <section class="controls-row">
-            <button id="chaos-btn" onclick="toggleChaos()">Simulate Peak Traffic (Diwali Weekend)</button>
+
 
             <div class="slider-group">
                 <label>Dedup Interval</label>
@@ -598,19 +597,13 @@
             <button id="trigger-dedup-btn" onclick="triggerDedup()">Trigger Dedup Now</button>
         </section>
 
-        <!-- LIVE EVENT FEED -->
-        <section class="card feed-section">
-            <div class="card-title">Live Event Feed - Deduplicated Journeys</div>
-            <div class="event-feed" id="event-feed">
-                <div class="empty-state">Waiting for deduplication run...</div>
-            </div>
-        </section>
+        
 
         <!-- STATUS FOOTER -->
         <footer class="status-bar">
             <div class="status-item">Backend: <span id="status-backend">â€”</span></div>
             <div class="status-item">Last Dedup: <span id="status-last-dedup">never</span></div>
-            <div class="status-item">Chaos Mode: <span id="status-chaos">OFF</span></div>
+
             <div class="status-item">Dedup Worker: <span id="status-worker">â€”</span></div>
             <div class="status-item">Server: <span id="status-health">â€”</span></div>
         </footer>
@@ -619,7 +612,7 @@
 
     <!-- Chart.js & Leaflet JS from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    
 
     <script>
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CONFIGURATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -630,21 +623,13 @@
     const POLL_HEALTH_MS      = 5000;
 
     // Actual Toll Plaza coordinates in India
+    
     const KNOWN_PLAZAS = {
-        'PLAZA_NH48_GURUGRAM':  { region: 'NORTH', name: 'Kherki Daula (Gurugram)', lat: 28.3995, lng: 76.9946 },
-        'PLAZA_NH2_AGRA':       { region: 'NORTH', name: 'Agra (NH-19)', lat: 27.2403, lng: 77.8931 },
-        'PLAZA_NH48_JAIPUR':    { region: 'NORTH', name: 'Daulatpura (Jaipur)', lat: 27.0425, lng: 75.7663 },
-        'PLAZA_NH44_DELHI':     { region: 'NORTH', name: 'Delhi Border (NH-44)', lat: 28.8422, lng: 77.1265 },
-        'PLAZA_NH48_MUMBAI':    { region: 'WEST',  name: 'Bandra-Worli (Mumbai)', lat: 19.0347, lng: 72.8193 },
-        'PLAZA_NH48_PUNE':      { region: 'WEST',  name: 'Talegaon (Pune)', lat: 18.7061, lng: 73.6644 },
-        'PLAZA_NH48_AHMEDABAD': { region: 'WEST',  name: 'Ahmedabad Ring Road', lat: 22.9515, lng: 72.5441 },
-        'PLAZA_NH48_SURAT':     { region: 'WEST',  name: 'Surat Bypass', lat: 21.2136, lng: 72.8943 },
-        'PLAZA_NH44_CHENNAI':   { region: 'SOUTH', name: 'Paranur (Chennai)', lat: 12.7562, lng: 79.9984 },
-        'PLAZA_NH44_BANGALORE': { region: 'SOUTH', name: 'Electronic City (BLR)', lat: 12.8443, lng: 77.6622 },
-        'PLAZA_NH44_HYDERABAD': { region: 'SOUTH', name: 'Hyderabad ORR', lat: 17.2515, lng: 78.2917 },
-        'PLAZA_NH16_KOLKATA':   { region: 'EAST',  name: 'Kolkata (NH-16)', lat: 22.5726, lng: 88.3639 },
-        'PLAZA_NH16_BHUBANESWAR': { region: 'EAST', name: 'Bhubaneswar Toll', lat: 20.2961, lng: 85.8245 },
+        'PLAZA_NH44_DELHI':     { region: 'DELHI', name: 'Delhi Border (NH-44)' },
+        'PLAZA_NH48_MUMBAI':    { region: 'MUMBAI',  name: 'Bandra-Worli (Mumbai)' },
+        'PLAZA_NH44_CHENNAI':   { region: 'CHENNAI', name: 'Paranur (Chennai)' }
     };
+
 
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const counters = {
@@ -689,74 +674,149 @@
         };
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ MAP INITIALIZATION (Leaflet) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function initMap() {
-        // Initialize map centered on India
-        map = L.map('map', {
-            center: [22.0, 79.0], 
-            zoom: 4,
-            minZoom: 3,
-            maxZoom: 10
-        });
+    
+    // --- CUSTOM CSS MAP INITIALIZATION ---
+    
+    // --- CUSTOM CSS MAP INITIALIZATION ---
+    const mapContainer = document.getElementById('map');
+    if (mapContainer) {
+        // Reset container to be a flexbox
+        mapContainer.style.display = 'flex';
+        mapContainer.style.justifyContent = 'center';
+        mapContainer.style.alignItems = 'center';
+        mapContainer.style.overflow = 'hidden';
+        
+        // Create an inner wrapper that maintains the 1:1 square aspect ratio of the image
+        var mapDiv = document.createElement('div');
+        mapDiv.style.position = 'relative';
+        mapDiv.style.height = '100%';
+        mapDiv.style.aspectRatio = '1 / 1';
+        mapDiv.style.backgroundImage = "url('/static/india_map_transparent.png')";
+        mapDiv.style.backgroundSize = 'contain';
+        mapDiv.style.backgroundRepeat = 'no-repeat';
+        mapDiv.style.backgroundPosition = 'center';
+        
+        mapContainer.appendChild(mapDiv);
+    }
 
-        // Use standard OpenStreetMap tiles, guaranteed to work without API keys
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
-        }).addTo(map);
+    
+    
+    const tooltip = document.createElement('div');
+    tooltip.style.position = 'absolute';
+    tooltip.style.display = 'none';
+    tooltip.style.backgroundColor = '#d4edda';
+    tooltip.style.border = '2px solid #0b4a22';
+    tooltip.style.padding = '10px';
+    tooltip.style.borderRadius = '5px';
+    tooltip.style.color = '#0b4a22';
+    tooltip.style.fontWeight = 'bold';
+    tooltip.style.zIndex = '9999';
+    tooltip.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    tooltip.style.pointerEvents = 'none';
+    
+    if (mapDiv) {
+        mapDiv.appendChild(tooltip);
+    }
 
-        // Define a custom divIcon for markers
-        const createMarkerIcon = (size = 12, isActive = false) => {
-            return L.divIcon({
-                className: 'custom-marker',
-                html: `<div class="plaza-marker ${isActive ? 'active' : ''}" style="width: ${size}px; height: ${size}px; margin-top: -${size/2}px; margin-left: -${size/2}px;"></div>`,
-                iconSize: [0, 0] // Handle offset in HTML
-            });
+    const markersData = {};
+
+    const markers = {};
+    
+    function createMarker(id, top, left, label) {
+        if (!mapDiv) return;
+        const m = document.createElement('div');
+        m.style.position = 'absolute';
+        m.style.top = top;
+        m.style.left = left;
+        m.style.width = '15px';
+        m.style.height = '15px';
+        m.style.backgroundColor = 'var(--color-3)';
+        m.style.borderRadius = '50%';
+        m.style.transform = 'translate(-50%, -50%)';
+        m.style.transition = 'all 0.3s ease';
+        m.style.boxShadow = '0 0 10px var(--color-3)';
+        
+        const text = document.createElement('div');
+        text.textContent = label;
+        text.style.position = 'absolute';
+        text.style.top = '20px';
+        text.style.left = '50%';
+        text.style.transform = 'translateX(-50%)';
+        text.style.color = '#0b4a22';
+        text.style.fontWeight = 'bold';
+        text.style.textShadow = '0 0 3px #fff';
+        m.appendChild(text);
+        
+        mapDiv.appendChild(m);
+        
+        m.style.cursor = 'pointer';
+        
+        m.onclick = function(e) {
+            const data = markersData[id];
+            if (data) {
+                tooltip.innerHTML = `
+                    <div style="font-size: 1.1em; border-bottom: 1px solid #0b4a22; margin-bottom: 5px; padding-bottom: 5px;">${label}</div>
+                    Total Pings: ${data.total_pings.toLocaleString()}<br>
+                    Unique Tags: ${data.unique_tags.toLocaleString()}<br>
+                    Duplicates: ${data.duplicates.toLocaleString()}
+                `;
+                tooltip.style.display = 'block';
+                
+                // Position tooltip near the marker
+                const rect = m.getBoundingClientRect();
+                const mapRect = mapDiv.getBoundingClientRect();
+                tooltip.style.left = (rect.left - mapRect.left + 25) + 'px';
+                tooltip.style.top = (rect.top - mapRect.top - 20) + 'px';
+                
+                // Hide after 3 seconds
+                setTimeout(() => { tooltip.style.display = 'none'; }, 3000);
+            } else {
+                tooltip.innerHTML = label + "<br>No data yet";
+                tooltip.style.display = 'block';
+                const rect = m.getBoundingClientRect();
+                const mapRect = mapDiv.getBoundingClientRect();
+                tooltip.style.left = (rect.left - mapRect.left + 25) + 'px';
+                tooltip.style.top = (rect.top - mapRect.top - 20) + 'px';
+                setTimeout(() => { tooltip.style.display = 'none'; }, 3000);
+            }
+            e.stopPropagation();
+        };
+        
+        mapDiv.onclick = function() {
+            tooltip.style.display = 'none';
         };
 
-        // Pre-add known plazas to the map with default size
-        for (const [id, data] of Object.entries(KNOWN_PLAZAS)) {
-            const marker = L.marker([data.lat, data.lng], { icon: createMarkerIcon(12, false) })
-                .bindPopup(`<b>${data.name}</b><br>Region: ${data.region}<br>Pings: 0`)
-                .addTo(map);
-            mapMarkers[id] = marker;
-        }
+        markers[id] = m;
     }
-
-    function updateMapMarkers(plazas) {
-        if (!map) return;
+    
+    function initMap() {
+        createMarker('PLAZA_NH44_DELHI', '31.7%', '41.1%', 'DELHI');
+        createMarker('PLAZA_NH48_MUMBAI', '62.5%', '24.1%', 'MUMBAI');
+        createMarker('PLAZA_NH44_CHENNAI', '76.6%', '46.3%', 'CHENNAI');
+    }
+    
+    function updateMapMarkers(plazasData) {
+        Object.values(markers).forEach(m => {
+            m.style.width = '15px';
+            m.style.height = '15px';
+            m.style.backgroundColor = 'var(--color-3)';
+        });
         
-        for (const plazaId in plazas) {
-            const stats = plazas[plazaId];
-            let marker = mapMarkers[plazaId];
-            
-            // Calculate size based on pings (logarithmic scale)
-            let size = 12;
-            let isActive = false;
-            
-            if (stats.total_pings > 0) {
-                isActive = true;
-                // Base 14, max 35
-                size = Math.min(35, Math.max(14, 14 + Math.log10(stats.total_pings) * 5));
-            }
-            
-            // If marker exists (known plaza), update it
-            if (marker) {
-                const createMarkerIcon = (s, active) => L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div class="plaza-marker ${active ? 'active' : ''}" style="width: ${s}px; height: ${s}px; margin-top: -${s/2}px; margin-left: -${s/2}px;"></div>`,
-                    iconSize: [0,0]
-                });
-                
-                marker.setIcon(createMarkerIcon(size, isActive));
-                
-                const name = KNOWN_PLAZAS[plazaId] ? KNOWN_PLAZAS[plazaId].name : formatPlazaName(plazaId);
-                marker.setPopupContent(`<b>${name}</b><br>Region: ${stats.region || 'Unknown'}<br>Total Pings: ${stats.total_pings.toLocaleString()}<br>Duplicates: ${stats.duplicates.toLocaleString()}`);
+        
+        for (const id in plazasData) {
+            const data = plazasData[id];
+            markersData[id] = data;
+
+            if (markers[id]) {
+                const scale = Math.min(3, 1 + (data.total_pings / 5000));
+                markers[id].style.width = (15 * scale) + 'px';
+                markers[id].style.height = (15 * scale) + 'px';
+                markers[id].style.backgroundColor = '#913c32'; // Reddish when active
             }
         }
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ COUNTER ANIMATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── COUNTER ANIMATION ───
     function tickCounters() {
         for (const key of Object.keys(counters)) {
             const c = counters[key];
@@ -780,8 +840,8 @@
     function initCharts() {
         if (typeof Chart === 'undefined') return;
 
-        Chart.defaults.color = '#ead3b5'; // color-4
-        Chart.defaults.borderColor = 'rgba(156, 195, 230, 0.4)'; // border-light
+        Chart.defaults.color = '#0b4a22'; // color-4
+        Chart.defaults.borderColor = '#0b4a22'; // border-light
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.font.weight = 500;
 
@@ -793,8 +853,8 @@
                 datasets: [{
                     label: 'Pings/sec',
                     data: [],
-                    borderColor: '#9cc3e6', // color-3
-                    backgroundColor: 'rgba(156, 195, 230, 0.15)',
+                    borderColor: '#0b4a22', // color-3
+                    backgroundColor: '#d4edda',
                     fill: true,
                     tension: 0.4,
                     pointRadius: 0,
@@ -810,20 +870,20 @@
                 scales: {
                     x: {
                         ticks: { maxTicksLimit: 6 },
-                        grid: { color: 'rgba(156, 195, 230, 0.2)' },
+                        grid: { color: '#c3e6cb' },
                     },
                     y: {
                         beginAtZero: true,
-                        grid: { color: 'rgba(156, 195, 230, 0.2)' },
+                        grid: { color: '#c3e6cb' },
                     }
                 },
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#16304a', // color-2
-                        titleColor: '#f3efe6', // color-5
-                        bodyColor: '#9cc3e6', // color-3
-                        borderColor: '#9cc3e6',
+                        backgroundColor: '#d4edda', // color-2
+                        titleColor: '#0b4a22', // color-5
+                        bodyColor: '#0b4a22', // color-3
+                        borderColor: '#0b4a22',
                         borderWidth: 1,
                         titleFont: { family: "'Inter', sans-serif", weight: 500 },
                         bodyFont: { family: "'Inter', sans-serif", weight: 500 }
@@ -839,8 +899,8 @@
                 labels: ['Duplicates Filtered', 'Clean Journeys'],
                 datasets: [{
                     data: [0, 1],
-                    backgroundColor: ['#0a1726', '#16304a'], // color-1, color-2
-                    borderColor: '#16304a',
+                    backgroundColor: ['#0a1726', '#d4edda'], // color-1, color-2
+                    borderColor: '#d4edda',
                     borderWidth: 3,
                     hoverOffset: 4,
                 }]
@@ -853,10 +913,10 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#16304a',
-                        titleColor: '#f3efe6',
-                        bodyColor: '#ead3b5',
-                        borderColor: '#9cc3e6',
+                        backgroundColor: '#d4edda',
+                        titleColor: '#0b4a22',
+                        bodyColor: '#0b4a22',
+                        borderColor: '#0b4a22',
                         borderWidth: 1,
                         callbacks: {
                             label: function(ctx) {
@@ -891,13 +951,13 @@
             if (dedupGaugeChart) {
                 if (!d.last_dedup_run) {
                     dedupGaugeChart.data.datasets[0].data = [0, 1];
-                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#0a1726', '#16304a'];
+                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#0a1726', '#d4edda'];
                     document.getElementById('gauge-ratio').textContent = 'â€”';
                     document.getElementById('gauge-sublabel').textContent = 'Awaiting first dedup runâ€¦';
                 } else {
                     const ratio = d.dedup_ratio || 0;
                     dedupGaugeChart.data.datasets[0].data = [ratio, Math.max(0.5, 100 - ratio)];
-                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#ead3b5', '#9cc3e6']; // Beige and light blue
+                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#0b4a22', '#0b4a22']; // Beige and light blue
                     document.getElementById('gauge-ratio').textContent = ratio.toFixed(1) + '%';
                     document.getElementById('gauge-sublabel').textContent =
                         (d.last_raw_count || 0).toLocaleString() + ' raw â†’ ' +
@@ -907,18 +967,6 @@
             }
 
             const chaosActive = !!d.chaos_mode;
-            const btn = document.getElementById('chaos-btn');
-            if (chaosActive) {
-                btn.classList.add('active');
-                btn.textContent = 'CHAOS MODE ACTIVE - CLICK TO STOP';
-                document.body.classList.add('chaos-active');
-                document.getElementById('status-chaos').innerHTML = '<span class="chaos-on">ON</span>';
-            } else {
-                btn.classList.remove('active');
-                btn.textContent = 'Simulate Peak Traffic (Diwali Weekend)';
-                document.body.classList.remove('chaos-active');
-                document.getElementById('status-chaos').textContent = 'OFF';
-            }
 
             document.getElementById('status-last-dedup').textContent = formatTime(d.last_dedup_run);
 
@@ -1006,28 +1054,7 @@
         renderPlazaTable();
     }
 
-    async function pollEvents() {
-        try {
-            const res = await fetch('/api/dedup/results');
-            if (!res.ok) return;
-            const d = await res.json();
-            const feed = document.getElementById('event-feed');
-
-            if (d.journeys && d.journeys.length > 0) {
-                const items = d.journeys.slice(-30).reverse();
-                feed.innerHTML = items.map(function(j) {
-                    return '<div class="event-row">' +
-                        '<span class="ev-tag">' + escapeHtml(j.tag_id) + '</span>' +
-                        '<span>@</span>' +
-                        '<span class="ev-plaza">' + escapeHtml(formatPlazaName(j.plaza_id)) + '</span>' +
-                        '<span class="ev-rssi">RSSI: ' + (j.rssi_signal_strength != null ? j.rssi_signal_strength.toFixed(1) : 'â€”') + '</span>' +
-                        '<span class="ev-dupes">' + (j.duplicate_count || 0) + ' dupes</span>' +
-                        '<span class="ev-time">' + formatTime(j.ping_timestamp) + '</span>' +
-                        '</div>';
-                }).join('');
-            }
-        } catch (e) {}
-    }
+    
 
     async function pollHealth() {
         try {
@@ -1089,7 +1116,7 @@
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ AUDIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     function playKaChing() {
-        if (!soundEnabled || !audioCtx) return;
+        if (typeof soundEnabled === "undefined" || typeof audioCtx === "undefined" || !soundEnabled || !audioCtx) return;
         try {
             const t = audioCtx.currentTime;
             [800, 1200].forEach((freq, i) => {
@@ -1119,7 +1146,7 @@
         (function loopStats() { pollStats().finally(() => setTimeout(loopStats, POLL_STATS_MS)); })();
         (function loopThroughput() { pollThroughput().finally(() => setTimeout(loopThroughput, POLL_THROUGHPUT_MS)); })();
         (function loopPlaza() { pollPlaza().finally(() => setTimeout(loopPlaza, POLL_PLAZA_MS)); })();
-        (function loopEvents() { pollEvents().finally(() => setTimeout(loopEvents, POLL_EVENTS_MS)); })();
+        
         (function loopHealth() { pollHealth().finally(() => setTimeout(loopHealth, POLL_HEALTH_MS)); })();
     }
 
@@ -1129,6 +1156,7 @@
         counters.dedupRatio.el    = document.getElementById('hero-dedup-ratio');
         counters.pps.el           = document.getElementById('hero-pps');
 
+        
         initMap();
         initCharts();
         loadDedupConfig();

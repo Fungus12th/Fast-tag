@@ -1,0 +1,74 @@
+# FASTag High-Frequency Ingestion Dashboard - Demo Guide
+
+This document outlines the steps to run the complete FASTag deduplication and ingestion demo across a local network using multiple laptops.
+
+## Prerequisites
+- Ensure all laptops (the Main Server and the Generator Laptops) are connected to the same Wi-Fi network or LAN.
+- Python 3 installed on all laptops.
+- The `generator.py` script copied to all Generator Laptops.
+
+## Phase 1: Starting the Main Server (Main Laptop)
+
+This is your central command center. It runs the Flask backend, processes the data, and serves the UI.
+
+1. **Open a terminal** in your FASTag project directory.
+2. **Start the server:**
+   ```bash
+   ./.venv/bin/python app.py
+   ```
+   *(If you are not using a virtual environment, just run `python app.py`)*
+3. **Find your Local IP Address:**
+   Open a new terminal tab and run:
+   ```bash
+   hostname -I
+   ```
+   *Note down this IP address (e.g., `172.20.167.79`). You will need it for the other laptops.*
+4. **Open the Dashboard:**
+   In your browser, navigate to:
+   - Dashboard: `http://localhost:5000`
+   - Live Database Feed: `http://localhost:5000/database`
+
+---
+
+## Phase 2: Connecting the Generator Laptops
+
+On your other laptops, you will use the `generator.py` script to simulate toll plazas pumping data into the main server.
+
+### Laptop 2 (Delhi Region Simulator)
+1. Set up a virtual environment and install the required dependency:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install requests
+   ```
+2. Run the generator, replacing `<MAIN_IP>` with the IP address you found in Phase 1:
+   ```bash
+   python generator.py --server <MAIN_IP> --region DELHI --workers 2
+   ```
+
+### Laptop 3 (Mumbai Region Simulator)
+1. Ensure `requests` is installed.
+2. Run the generator:
+   ```bash
+   python generator.py --server <MAIN_IP> --region MUMBAI --workers 2
+   ```
+
+### Laptop 4 (Chennai Region Simulator)
+1. Ensure `requests` is installed.
+2. Run the generator:
+   ```bash
+   python generator.py --server <MAIN_IP> --region CHENNAI --workers 2
+   ```
+
+---
+
+## Phase 3: The Demo Experience
+Once the laptops are connected and running, look at the main dashboard!
+1. **The Map:** The markers for Delhi, Mumbai, and Chennai will grow and glow as data flows in. Click them to view live ping statistics.
+2. **The Counters:** Watch the "Total Raw Pings" and "Pings Per Second" skyrocket as the generators stress-test the server.
+3. **Deduplication:** Every 30 seconds (configurable via the slider), the background worker sweeps the database and extracts clean journeys, updating the Deduplication Gauge.
+4. **Live Database:** Check out `/database` (or click "View Live Database") to see the raw NoSQL JSON data streaming in real-time.
+
+## Stopping & Resetting the Demo
+- To **shut down** the demo, simply press `CTRL+C` on the terminals running the server and the generators.
+- Because it relies on an ultra-fast in-memory database fallback, **resetting the data** is as easy as killing and restarting the `app.py` server!

@@ -34,6 +34,7 @@ class InMemoryStorage:
         self._throughput_log = deque(maxlen=10_000)
         print("[DB] Using IN-MEMORY storage backend")
 
+
     def insert_pings(self, pings: list[dict]) -> int:
         """Insert a batch of pings. Returns number inserted."""
         now = time.time()

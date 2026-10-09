@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASTag Live Ingestion Dashboard</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS CUSTOM PROPERTIES - Extracted Palette */
+        :root {
+            /* Exact Colors from provided image */
+            --color-1: #0a1726; /* Dark Blue */
+            --color-2: #16304a; /* Mid Blue */
+            --color-3: #9cc3e6; /* Light Blue */
+            --color-4: #ead3b5; /* Beige */
+            --color-5: #f3efe6; /* Off-white */
+
+            --bg-primary: var(--color-1);
+            --bg-card: var(--color-2);
+            --bg-card-hover: #3b7396;
+            --border: var(--color-3);
+            --border-light: rgba(156, 195, 230, 0.4);
+            --text-primary: var(--color-5);
+            --text-muted: var(--color-4);
+            --text-dim: var(--color-4);
+            
+            --accent-highlight: var(--color-4); 
+            --accent-blue-light: var(--color-3);
+            --accent-red: #d9534f;
+            
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        /* RESET & BODY */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* DASHBOARD LAYOUT */
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 3.5rem; /* Increased spacing to separate blocks */
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            padding: 1rem 0 0.5rem;
+            position: relative;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 2.5rem;
+            
+            color: var(--color-5);
+            letter-spacing: 0.5px;
+        }
+        .header .subtitle {
+            font-family: var(--font-body);
+            font-weight: 500;
+            color: var(--color-4);
+            font-size: 1.1rem;
+            margin-top: 0.4rem;
+            
+        }
+        .header .live-clock {
+            position: absolute;
+            top: 1rem; right: 0;
+            color: var(--color-3);
+            font-size: 1rem;
+            font-family: var(--font-mono); font-weight: 500;
+        }
+        
+        /* CARD BASE */
+        .card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        .card:hover {
+            border-color: var(--color-3);
+            background: var(--bg-card-hover);
+        }
+        .card-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            font-size: 1.1rem;
+            
+            color: var(--color-4);
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        /* HERO COUNTERS */
+        .hero-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+        .hero-card { text-align: center; }
+        .hero-value {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            font-size: 2.8rem;
+            
+            line-height: 1.1;
+            margin-top: 0.25rem;
+        }
+        .hero-value.primary { color: var(--color-3); }
+        .hero-value.highlight { color: var(--color-4); }
+        .hero-sub {
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: var(--color-4);
+            margin-top: 0.5rem;
+            
+        }
+
+        /* CHARTS ROW */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2.5rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 260px;
+        }
+        .gauge-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .gauge-chart-box {
+            position: relative;
+            width: 100%;
+            max-width: 220px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        .gauge-center-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .gauge-center-text .ratio-value {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            font-size: 2rem;
+            
+            color: var(--color-4);
+        }
+        .gauge-center-text .ratio-label {
+            font-family: var(--font-body);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            font-size: 0.8rem;
+            
+            color: var(--color-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .gauge-sublabel {
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.95rem;
+            
+            color: var(--color-5);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        /* MAP + PLAZA TABLE ROW */
+        .map-row {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2.5rem;
+        }
+        #map {
+            height: 340px;
+            width: 100%;
+            border-radius: 8px;
+            background: var(--color-2);
+            border: 2px solid var(--border-light);
+        }
+        
+        /* Map Color filter to match theme */
+        .leaflet-layer,
+        .leaflet-control-zoom-in,
+        .leaflet-control-zoom-out,
+        .leaflet-control-attribution {
+            filter: sepia(0.2) hue-rotate(180deg) brightness(0.9) contrast(1.1);
+        }
+
+        /* Custom map markers */
+        .plaza-marker {
+            background-color: var(--color-3);
+            border: 2px solid var(--color-5);
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .plaza-marker.active {
+            background-color: var(--color-4);
+            border-color: var(--color-1);
+            animation: marker-pulse 1s infinite alternate;
+        }
+        @keyframes marker-pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.4); }
+        }
+
+        /* Plaza table */
+        .plaza-table-wrap {
+            overflow-y: auto;
+            max-height: 340px;
+        }
+        .plaza-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 1rem;
+        }
+        .plaza-table th {
+            font-family: var(--font-body);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-align: left;
+            color: var(--color-3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+            padding: 0.6rem;
+            border-bottom: 2px solid var(--border-light);
+            cursor: pointer;
+            user-select: none;
+            
+        }
+        .plaza-table th:hover { color: var(--color-5); }
+        .plaza-table td {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            padding: 0.6rem;
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        .plaza-table td:first-child, .plaza-table td:last-child {
+            font-family: var(--font-body);
+            font-weight: 500;
+        }
+        .plaza-table tr.busiest td {
+            color: var(--color-4);
+        }
+        .plaza-table .region-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(156, 195, 230, 0.2);
+            color: var(--color-3);
+            border: 1px solid var(--color-3);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--color-3);
+            padding: 2rem;
+            font-size: 1rem;
+            font-family: var(--font-body);
+            font-weight: 500;
+        }
+
+        /* CONTROLS BAR */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            padding: 1.2rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-light);
+            border-radius: 12px;
+        }
+        #chaos-btn {
+            font-family: var(--font-body);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 0.9rem 2rem;
+            font-size: 1.1rem;
+            
+            
+            background: rgba(217, 83, 79, 0.1);
+            color: var(--accent-red);
+            border: 2px solid var(--accent-red);
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            transition: all 0.3s;
+        }
+        #chaos-btn:hover {
+            background: rgba(217, 83, 79, 0.2);
+            color: #ff6b68;
+        }
+        #chaos-btn.active {
+            background: var(--accent-red);
+            color: var(--color-5);
+            /* Removed animation */
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .slider-group label {
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--color-4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .slider-group .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .slider-group input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--color-1);
+            outline: none;
+            border: 1px solid var(--border-light);
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--color-4);
+            cursor: pointer;
+        }
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--color-4);
+            cursor: pointer;
+            border: none;
+        }
+        .slider-group .slider-val {
+            font-family: var(--font-mono);
+            font-size: 1.05rem;
+            font-weight: 500;
+            color: var(--color-3);
+            min-width: 2.5rem;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #trigger-dedup-btn {
+            font-family: var(--font-body);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 0.7rem 1.4rem;
+            
+            font-size: 1rem;
+            
+            background: var(--color-1);
+            color: var(--color-4);
+            border: 2px solid var(--color-3);
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        #trigger-dedup-btn:hover {
+            background: var(--color-3);
+            color: var(--color-1);
+        }
+        #trigger-dedup-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* LIVE EVENT FEED */
+        .event-feed {
+            max-height: 220px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            font-family: var(--font-body);
+        }
+        .event-feed::-webkit-scrollbar { width: 6px; }
+        .event-feed::-webkit-scrollbar-track { background: var(--bg-card); }
+        .event-feed::-webkit-scrollbar-thumb { background: var(--color-3); border-radius: 3px; }
+        .event-row {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .event-row .ev-tag   { color: var(--color-5); font-weight: 500; }
+        .event-row .ev-plaza { color: var(--color-3); font-weight: 500; }
+        .event-row .ev-rssi  { color: var(--color-4); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+        .event-row .ev-dupes { color: var(--color-1); background: var(--color-3); padding: 0 4px; border-radius: 4px; font-family: var(--font-mono); font-weight: 500; font-variant-numeric: tabular-nums;}
+        .event-row .ev-time  { color: var(--color-4); margin-left: auto; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+        /* STATUS FOOTER */
+        .status-bar {
+            font-family: var(--font-body);
+            font-weight: 500;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 2rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            
+            color: var(--color-3);
+        }
+        .status-bar .status-item span { color: var(--color-5); }
+        .status-bar .status-item .chaos-on { color: var(--accent-red); }
+
+        /* RESPONSIVE */
+        @media (max-width: 1000px) {
+            .hero-row { grid-template-columns: repeat(2, 1fr); }
+            .charts-row { grid-template-columns: 1fr; }
+            .map-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .dashboard { padding: 0.5rem 0.8rem 1.5rem; }
+            .hero-row { grid-template-columns: 1fr 1fr; }
+            .hero-value {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums; font-size: 2rem; }
+            .header h1 {
+            font-family: var(--font-display);
+            font-weight: 600; font-size: 1.5rem; }
+            .controls-row { gap: 1rem; }
+        }
+        
+        /* Leaflet Overrides */
+        .leaflet-container { background: var(--color-1);  }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: var(--color-2);
+            color: var(--color-5);
+            border: 2px solid var(--color-3);
+        }
+        .leaflet-popup-content { margin: 10px 14px; font-weight: 500; font-family: var(--font-body); font-size: 1rem;}
+        .leaflet-popup-close-button { color: var(--color-4) !important; }
+        .leaflet-control-zoom a {
+            background: var(--color-2) !important;
+            color: var(--color-5) !important;
+            border-color: var(--color-3) !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background: var(--color-3) !important;
+            color: var(--color-1) !important;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="dashboard">
+
+        <!-- HEADER -->
+        <header class="header">
+            
+            <h1>FASTag Live Ingestion Dashboard</h1>
+            <p class="subtitle">High-Frequency Ingestion &amp; Deduplication Demo</p>
+            <div class="live-clock" id="live-clock">--:--:--</div>
+        </header>
+
+        <!-- HERO COUNTERS -->
+        <section class="hero-row">
+            <div class="card hero-card">
+                <div class="card-title">Total Raw Pings Ingested</div>
+                <div class="hero-value primary" id="hero-total-pings">0</div>
+                <div class="hero-sub" id="hero-pings-sub">&nbsp;</div>
+            </div>
+            <div class="card hero-card">
+                <div class="card-title">Clean Deduplicated Journeys</div>
+                <div class="hero-value primary" id="hero-total-journeys">0</div>
+                <div class="hero-sub" id="hero-journeys-sub">&nbsp;</div>
+            </div>
+            <div class="card hero-card">
+                <div class="card-title">Deduplication Ratio</div>
+                <div class="hero-value highlight" id="hero-dedup-ratio">0%</div>
+                <div class="hero-sub" id="hero-ratio-sub">noise filtered</div>
+            </div>
+            <div class="card hero-card">
+                <div class="card-title">Pings Per Second</div>
+                <div class="hero-value primary" id="hero-pps">0</div>
+                <div class="hero-sub">throughput</div>
+            </div>
+        </section>
+
+        <!-- CHARTS ROW -->
+        <section class="charts-row">
+            <div class="card">
+                <div class="card-title">Live Throughput - Pings Per Second (30s window)</div>
+                <div class="chart-container">
+                    <canvas id="throughput-canvas"></canvas>
+                </div>
+            </div>
+            <div class="card gauge-wrapper">
+                <div class="card-title">Deduplication Gauge</div>
+                <div class="gauge-chart-box">
+                    <canvas id="gauge-canvas"></canvas>
+                    <div class="gauge-center-text">
+                        <div class="ratio-value" id="gauge-ratio">â€”</div>
+                        <div class="ratio-label">noise reduction</div>
+                    </div>
+                </div>
+                <div class="gauge-sublabel" id="gauge-sublabel">Awaiting first dedup runâ€¦</div>
+            </div>
+        </section>
+
+        <!-- MAP + PLAZA TABLE ROW -->
+        <section class="map-row">
+            <div class="card" style="padding: 1rem;">
+                <div class="card-title" style="margin-left: 0.5rem;">Live India Toll Plaza Map</div>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Per-Plaza Breakdown</div>
+                <div class="plaza-table-wrap">
+                    <table class="plaza-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortPlazaTable('plaza_id')">Plaza</th>
+                                <th onclick="sortPlazaTable('total_pings')">Pings</th>
+                                <th onclick="sortPlazaTable('unique_tags')">Unique Tags</th>
+                                <th onclick="sortPlazaTable('duplicates')">Duplicates</th>
+                                <th onclick="sortPlazaTable('region')">Region</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plaza-table-body">
+                            <tr><td colspan="5" class="empty-state">No data yet - start a generator</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTROLS BAR -->
+        <section class="controls-row">
+            <button id="chaos-btn" onclick="toggleChaos()">Simulate Peak Traffic (Diwali Weekend)</button>
+
+            <div class="slider-group">
+                <label>Dedup Interval</label>
+                <div class="slider-row">
+                    <input type="range" id="dedup-slider" min="10" max="60" step="5" value="30"
+                           oninput="onSliderInput(this.value)" onchange="onSliderChange(this.value)">
+                    <span class="slider-val" id="slider-val">30s</span>
+                </div>
+            </div>
+
+            <button id="trigger-dedup-btn" onclick="triggerDedup()">Trigger Dedup Now</button>
+        </section>
+
+        <!-- LIVE EVENT FEED -->
+        <section class="card feed-section">
+            <div class="card-title">Live Event Feed - Deduplicated Journeys</div>
+            <div class="event-feed" id="event-feed">
+                <div class="empty-state">Waiting for deduplication run...</div>
+            </div>
+        </section>
+
+        <!-- STATUS FOOTER -->
+        <footer class="status-bar">
+            <div class="status-item">Backend: <span id="status-backend">â€”</span></div>
+            <div class="status-item">Last Dedup: <span id="status-last-dedup">never</span></div>
+            <div class="status-item">Chaos Mode: <span id="status-chaos">OFF</span></div>
+            <div class="status-item">Dedup Worker: <span id="status-worker">â€”</span></div>
+            <div class="status-item">Server: <span id="status-health">â€”</span></div>
+        </footer>
+
+    </div>
+
+    <!-- Chart.js & Leaflet JS from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CONFIGURATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const POLL_STATS_MS       = 500;
+    const POLL_THROUGHPUT_MS  = 1000;
+    const POLL_PLAZA_MS       = 2000;
+    const POLL_EVENTS_MS      = 2000;
+    const POLL_HEALTH_MS      = 5000;
+
+    // Actual Toll Plaza coordinates in India
+    const KNOWN_PLAZAS = {
+        'PLAZA_NH48_GURUGRAM':  { region: 'NORTH', name: 'Kherki Daula (Gurugram)', lat: 28.3995, lng: 76.9946 },
+        'PLAZA_NH2_AGRA':       { region: 'NORTH', name: 'Agra (NH-19)', lat: 27.2403, lng: 77.8931 },
+        'PLAZA_NH48_JAIPUR':    { region: 'NORTH', name: 'Daulatpura (Jaipur)', lat: 27.0425, lng: 75.7663 },
+        'PLAZA_NH44_DELHI':     { region: 'NORTH', name: 'Delhi Border (NH-44)', lat: 28.8422, lng: 77.1265 },
+        'PLAZA_NH48_MUMBAI':    { region: 'WEST',  name: 'Bandra-Worli (Mumbai)', lat: 19.0347, lng: 72.8193 },
+        'PLAZA_NH48_PUNE':      { region: 'WEST',  name: 'Talegaon (Pune)', lat: 18.7061, lng: 73.6644 },
+        'PLAZA_NH48_AHMEDABAD': { region: 'WEST',  name: 'Ahmedabad Ring Road', lat: 22.9515, lng: 72.5441 },
+        'PLAZA_NH48_SURAT':     { region: 'WEST',  name: 'Surat Bypass', lat: 21.2136, lng: 72.8943 },
+        'PLAZA_NH44_CHENNAI':   { region: 'SOUTH', name: 'Paranur (Chennai)', lat: 12.7562, lng: 79.9984 },
+        'PLAZA_NH44_BANGALORE': { region: 'SOUTH', name: 'Electronic City (BLR)', lat: 12.8443, lng: 77.6622 },
+        'PLAZA_NH44_HYDERABAD': { region: 'SOUTH', name: 'Hyderabad ORR', lat: 17.2515, lng: 78.2917 },
+        'PLAZA_NH16_KOLKATA':   { region: 'EAST',  name: 'Kolkata (NH-16)', lat: 22.5726, lng: 88.3639 },
+        'PLAZA_NH16_BHUBANESWAR': { region: 'EAST', name: 'Bhubaneswar Toll', lat: 20.2961, lng: 85.8245 },
+    };
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const counters = {
+        totalPings:   { current: 0, target: 0, el: null },
+        totalJourneys:{ current: 0, target: 0, el: null },
+        dedupRatio:   { current: 0, target: 0, el: null },
+        pps:          { current: 0, target: 0, el: null },
+    };
+    let lastDedupRunAt = null;
+    let plazaSortKey   = 'total_pings';
+    let plazaSortAsc   = false;
+    let currentPlazaData = {};
+
+    let throughputChart = null;
+    let dedupGaugeChart = null;
+    let map = null;
+    let mapMarkers = {};
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ UTILITIES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function formatTime(iso) {
+        if (!iso) return 'â€”';
+        try {
+            const d = new Date(iso);
+            return d.toLocaleTimeString('en-US', { hour12: false });
+        } catch { return iso; }
+    }
+    function formatPlazaName(id) {
+        if (KNOWN_PLAZAS[id]) return KNOWN_PLAZAS[id].name;
+        return String(id).replace(/^PLAZA_/i, '').replace(/_/g, ' ');
+    }
+    function debounce(fn, ms) {
+        let timer;
+        return function() {
+            const args = arguments;
+            clearTimeout(timer);
+            timer = setTimeout(function() { fn.apply(null, args); }, ms);
+        };
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ MAP INITIALIZATION (Leaflet) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function initMap() {
+        // Initialize map centered on India
+        map = L.map('map', {
+            center: [22.0, 79.0], 
+            zoom: 4,
+            minZoom: 3,
+            maxZoom: 10
+        });
+
+        // Use standard OpenStreetMap tiles, guaranteed to work without API keys
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Define a custom divIcon for markers
+        const createMarkerIcon = (size = 12, isActive = false) => {
+            return L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="plaza-marker ${isActive ? 'active' : ''}" style="width: ${size}px; height: ${size}px; margin-top: -${size/2}px; margin-left: -${size/2}px;"></div>`,
+                iconSize: [0, 0] // Handle offset in HTML
+            });
+        };
+
+        // Pre-add known plazas to the map with default size
+        for (const [id, data] of Object.entries(KNOWN_PLAZAS)) {
+            const marker = L.marker([data.lat, data.lng], { icon: createMarkerIcon(12, false) })
+                .bindPopup(`<b>${data.name}</b><br>Region: ${data.region}<br>Pings: 0`)
+                .addTo(map);
+            mapMarkers[id] = marker;
+        }
+    }
+
+    function updateMapMarkers(plazas) {
+        if (!map) return;
+        
+        for (const plazaId in plazas) {
+            const stats = plazas[plazaId];
+            let marker = mapMarkers[plazaId];
+            
+            // Calculate size based on pings (logarithmic scale)
+            let size = 12;
+            let isActive = false;
+            
+            if (stats.total_pings > 0) {
+                isActive = true;
+                // Base 14, max 35
+                size = Math.min(35, Math.max(14, 14 + Math.log10(stats.total_pings) * 5));
+            }
+            
+            // If marker exists (known plaza), update it
+            if (marker) {
+                const createMarkerIcon = (s, active) => L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div class="plaza-marker ${active ? 'active' : ''}" style="width: ${s}px; height: ${s}px; margin-top: -${s/2}px; margin-left: -${s/2}px;"></div>`,
+                    iconSize: [0,0]
+                });
+                
+                marker.setIcon(createMarkerIcon(size, isActive));
+                
+                const name = KNOWN_PLAZAS[plazaId] ? KNOWN_PLAZAS[plazaId].name : formatPlazaName(plazaId);
+                marker.setPopupContent(`<b>${name}</b><br>Region: ${stats.region || 'Unknown'}<br>Total Pings: ${stats.total_pings.toLocaleString()}<br>Duplicates: ${stats.duplicates.toLocaleString()}`);
+            }
+        }
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ COUNTER ANIMATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function tickCounters() {
+        for (const key of Object.keys(counters)) {
+            const c = counters[key];
+            if (!c.el) continue;
+            const diff = c.target - c.current;
+            if (Math.abs(diff) < 0.5) {
+                c.current = c.target;
+            } else {
+                c.current += diff * 0.15;
+            }
+            if (key === 'dedupRatio') {
+                c.el.textContent = c.current.toFixed(1) + '%';
+            } else {
+                c.el.textContent = Math.round(c.current).toLocaleString();
+            }
+        }
+        requestAnimationFrame(tickCounters);
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CHART INITIALIZATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function initCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        Chart.defaults.color = '#ead3b5'; // color-4
+        Chart.defaults.borderColor = 'rgba(156, 195, 230, 0.4)'; // border-light
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.font.weight = 500;
+
+        const tCtx = document.getElementById('throughput-canvas').getContext('2d');
+        throughputChart = new Chart(tCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Pings/sec',
+                    data: [],
+                    borderColor: '#9cc3e6', // color-3
+                    backgroundColor: 'rgba(156, 195, 230, 0.15)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHitRadius: 10,
+                    borderWidth: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 200 },
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: {
+                        ticks: { maxTicksLimit: 6 },
+                        grid: { color: 'rgba(156, 195, 230, 0.2)' },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(156, 195, 230, 0.2)' },
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#16304a', // color-2
+                        titleColor: '#f3efe6', // color-5
+                        bodyColor: '#9cc3e6', // color-3
+                        borderColor: '#9cc3e6',
+                        borderWidth: 1,
+                        titleFont: { family: "'Inter', sans-serif", weight: 500 },
+                        bodyFont: { family: "'Inter', sans-serif", weight: 500 }
+                    }
+                }
+            }
+        });
+
+        const gCtx = document.getElementById('gauge-canvas').getContext('2d');
+        dedupGaugeChart = new Chart(gCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Duplicates Filtered', 'Clean Journeys'],
+                datasets: [{
+                    data: [0, 1],
+                    backgroundColor: ['#0a1726', '#16304a'], // color-1, color-2
+                    borderColor: '#16304a',
+                    borderWidth: 3,
+                    hoverOffset: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                animation: { duration: 400 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#16304a',
+                        titleColor: '#f3efe6',
+                        bodyColor: '#ead3b5',
+                        borderColor: '#9cc3e6',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.label + ': ' + ctx.parsed.toFixed(1) + '%';
+                            }
+                        },
+                        titleFont: { family: "'Inter', sans-serif", weight: 500 },
+                        bodyFont: { family: "'Inter', sans-serif", weight: 500 }
+                    }
+                }
+            }
+        });
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ POLLING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    async function pollStats() {
+        try {
+            const res = await fetch('/api/stats');
+            if (!res.ok) return;
+            const d = await res.json();
+
+            counters.totalPings.target   = d.total_raw_pings || 0;
+            counters.totalJourneys.target = d.total_deduplicated_journeys || 0;
+            counters.dedupRatio.target    = d.dedup_ratio || 0;
+            counters.pps.target           = d.pings_per_second || 0;
+
+            if (d.last_raw_count > 0 && d.last_journey_count >= 0) {
+                document.getElementById('hero-pings-sub').textContent = 'last window: ' + d.last_raw_count.toLocaleString();
+                document.getElementById('hero-journeys-sub').textContent = 'last run: ' + d.last_journey_count.toLocaleString();
+            }
+
+            if (dedupGaugeChart) {
+                if (!d.last_dedup_run) {
+                    dedupGaugeChart.data.datasets[0].data = [0, 1];
+                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#0a1726', '#16304a'];
+                    document.getElementById('gauge-ratio').textContent = 'â€”';
+                    document.getElementById('gauge-sublabel').textContent = 'Awaiting first dedup runâ€¦';
+                } else {
+                    const ratio = d.dedup_ratio || 0;
+                    dedupGaugeChart.data.datasets[0].data = [ratio, Math.max(0.5, 100 - ratio)];
+                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#ead3b5', '#9cc3e6']; // Beige and light blue
+                    document.getElementById('gauge-ratio').textContent = ratio.toFixed(1) + '%';
+                    document.getElementById('gauge-sublabel').textContent =
+                        (d.last_raw_count || 0).toLocaleString() + ' raw â†’ ' +
+                        (d.last_journey_count || 0).toLocaleString() + ' journeys';
+                }
+                dedupGaugeChart.update();
+            }
+
+            const chaosActive = !!d.chaos_mode;
+            const btn = document.getElementById('chaos-btn');
+            if (chaosActive) {
+                btn.classList.add('active');
+                btn.textContent = 'CHAOS MODE ACTIVE - CLICK TO STOP';
+                document.body.classList.add('chaos-active');
+                document.getElementById('status-chaos').innerHTML = '<span class="chaos-on">ON</span>';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = 'Simulate Peak Traffic (Diwali Weekend)';
+                document.body.classList.remove('chaos-active');
+                document.getElementById('status-chaos').textContent = 'OFF';
+            }
+
+            document.getElementById('status-last-dedup').textContent = formatTime(d.last_dedup_run);
+
+            if (d.last_dedup_run && d.last_dedup_run !== lastDedupRunAt) {
+                if (lastDedupRunAt !== null) playKaChing();
+                lastDedupRunAt = d.last_dedup_run;
+            }
+
+        } catch (e) {}
+    }
+
+    async function pollThroughput() {
+        if (!throughputChart) return;
+        try {
+            const res = await fetch('/api/stats/throughput?buckets=30');
+            if (!res.ok) return;
+            const d = await res.json();
+            if (!d.data || !Array.isArray(d.data)) return;
+
+            const labels = d.data.map(function(point) {
+                const t = new Date(point.timestamp);
+                return String(t.getHours()).padStart(2, '0') + ':' +
+                       String(t.getMinutes()).padStart(2, '0') + ':' +
+                       String(t.getSeconds()).padStart(2, '0');
+            });
+            const values = d.data.map(function(point) { return point.pps; });
+
+            throughputChart.data.labels = labels;
+            throughputChart.data.datasets[0].data = values;
+            throughputChart.update('none');
+        } catch (e) {}
+    }
+
+    async function pollPlaza() {
+        try {
+            const res = await fetch('/api/stats/plaza');
+            if (!res.ok) return;
+            const d = await res.json();
+            if (!d.plazas) return;
+
+            currentPlazaData = d.plazas;
+            renderPlazaTable();
+            updateMapMarkers(d.plazas);
+        } catch (e) {}
+    }
+
+    function renderPlazaTable() {
+        const plazas = currentPlazaData;
+        const tbody = document.getElementById('plaza-table-body');
+        const entries = Object.values(plazas);
+
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No data yet - start a generator</td></tr>';
+            return;
+        }
+
+        entries.sort(function(a, b) {
+            const av = a[plazaSortKey], bv = b[plazaSortKey];
+            if (typeof av === 'string') return plazaSortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+            return plazaSortAsc ? av - bv : bv - av;
+        });
+
+        let maxPings = 0;
+        entries.forEach(function(e) { if (e.total_pings > maxPings) maxPings = e.total_pings; });
+
+        tbody.innerHTML = entries.map(function(p) {
+            const isBusiest = p.total_pings === maxPings && maxPings > 0;
+            return '<tr class="' + (isBusiest ? 'busiest' : '') + '">' +
+                '<td>' + escapeHtml(formatPlazaName(p.plaza_id)) + '</td>' +
+                '<td>' + (p.total_pings || 0).toLocaleString() + '</td>' +
+                '<td>' + (p.unique_tags || 0).toLocaleString() + '</td>' +
+                '<td>' + (p.duplicates || 0).toLocaleString() + '</td>' +
+                '<td><span class="region-badge">' + escapeHtml(p.region || 'â€”') + '</span></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function sortPlazaTable(key) {
+        if (plazaSortKey === key) {
+            plazaSortAsc = !plazaSortAsc;
+        } else {
+            plazaSortKey = key;
+            plazaSortAsc = false;
+        }
+        renderPlazaTable();
+    }
+
+    async function pollEvents() {
+        try {
+            const res = await fetch('/api/dedup/results');
+            if (!res.ok) return;
+            const d = await res.json();
+            const feed = document.getElementById('event-feed');
+
+            if (d.journeys && d.journeys.length > 0) {
+                const items = d.journeys.slice(-30).reverse();
+                feed.innerHTML = items.map(function(j) {
+                    return '<div class="event-row">' +
+                        '<span class="ev-tag">' + escapeHtml(j.tag_id) + '</span>' +
+                        '<span>@</span>' +
+                        '<span class="ev-plaza">' + escapeHtml(formatPlazaName(j.plaza_id)) + '</span>' +
+                        '<span class="ev-rssi">RSSI: ' + (j.rssi_signal_strength != null ? j.rssi_signal_strength.toFixed(1) : 'â€”') + '</span>' +
+                        '<span class="ev-dupes">' + (j.duplicate_count || 0) + ' dupes</span>' +
+                        '<span class="ev-time">' + formatTime(j.ping_timestamp) + '</span>' +
+                        '</div>';
+                }).join('');
+            }
+        } catch (e) {}
+    }
+
+    async function pollHealth() {
+        try {
+            const res = await fetch('/api/health');
+            if (!res.ok) { document.getElementById('status-health').textContent = 'ERROR'; return; }
+            const d = await res.json();
+            document.getElementById('status-backend').textContent = d.storage_backend || 'â€”';
+            document.getElementById('status-worker').textContent = d.dedup_worker_running ? 'running' : 'stopped';
+            document.getElementById('status-health').textContent = d.status || 'â€”';
+        } catch (e) {
+            document.getElementById('status-health').textContent = 'OFFLINE';
+        }
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CONTROLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    async function toggleChaos() {
+        try { await fetch('/api/chaos', { method: 'POST' }); } catch (e) {}
+    }
+
+    async function triggerDedup() {
+        const btn = document.getElementById('trigger-dedup-btn');
+        btn.disabled = true;
+        btn.textContent = 'Runningâ€¦';
+        try {
+            const res = await fetch('/api/dedup/trigger', { method: 'POST' });
+            const d = await res.json();
+            btn.textContent = 'DONE: ' + (d.raw_count || 0) + ' -> ' + (d.journey_count || 0);
+            setTimeout(() => { btn.textContent = 'Trigger Dedup Now'; btn.disabled = false; }, 2000);
+        } catch (e) {
+            btn.textContent = 'Error';
+            setTimeout(() => { btn.textContent = 'Trigger Dedup Now'; btn.disabled = false; }, 2000);
+        }
+    }
+
+    function onSliderInput(val) { document.getElementById('slider-val').textContent = val + 's'; }
+    const sendSliderUpdate = debounce(function(val) {
+        fetch('/api/dedup/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ interval_seconds: parseInt(val, 10) })
+        });
+    }, 400);
+    function onSliderChange(val) { sendSliderUpdate(val); }
+
+    async function loadDedupConfig() {
+        try {
+            const res = await fetch('/api/dedup/config');
+            if (!res.ok) return;
+            const d = await res.json();
+            if (d.interval_seconds != null) {
+                const slider = document.getElementById('dedup-slider');
+                const clamped = Math.max(10, Math.min(60, d.interval_seconds));
+                slider.value = clamped;
+                document.getElementById('slider-val').textContent = clamped + 's';
+            }
+        } catch (e) {}
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ AUDIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    function playKaChing() {
+        if (!soundEnabled || !audioCtx) return;
+        try {
+            const t = audioCtx.currentTime;
+            [800, 1200].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t + i * 0.08);
+                gain.gain.setValueAtTime(0.08, t + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.25);
+                osc.start(t + i * 0.08);
+                osc.stop(t + i * 0.08 + 0.25);
+            });
+        } catch (e) {}
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('live-clock').textContent =
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0');
+    }
+
+    function startPolling() {
+        (function loopStats() { pollStats().finally(() => setTimeout(loopStats, POLL_STATS_MS)); })();
+        (function loopThroughput() { pollThroughput().finally(() => setTimeout(loopThroughput, POLL_THROUGHPUT_MS)); })();
+        (function loopPlaza() { pollPlaza().finally(() => setTimeout(loopPlaza, POLL_PLAZA_MS)); })();
+        (function loopEvents() { pollEvents().finally(() => setTimeout(loopEvents, POLL_EVENTS_MS)); })();
+        (function loopHealth() { pollHealth().finally(() => setTimeout(loopHealth, POLL_HEALTH_MS)); })();
+    }
+
+    function init() {
+        counters.totalPings.el    = document.getElementById('hero-total-pings');
+        counters.totalJourneys.el = document.getElementById('hero-total-journeys');
+        counters.dedupRatio.el    = document.getElementById('hero-dedup-ratio');
+        counters.pps.el           = document.getElementById('hero-pps');
+
+        initMap();
+        initCharts();
+        loadDedupConfig();
+        requestAnimationFrame(tickCounters);
+        updateClock(); setInterval(updateClock, 1000);
+        startPolling();
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
+
+

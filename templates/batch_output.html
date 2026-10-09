@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Batch Processor Output</title>
+    <style>
+        body {
+            background-color: #f2e0f2;
+            background-image: radial-gradient(#cb9acb 2px, transparent 2px);
+            background-size: 30px 30px;
+            font-family: monospace;
+            color: #111;
+            padding: 20px;
+        }
+        h1 { text-align: center; }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .summary-box {
+            display: flex;
+            justify-content: space-around;
+            background: #e3c3e3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 1.8em;
+            color: #4a0b3f;
+            display: block;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        th { background: #cb9acb; }
+        tr:nth-child(even) { background: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Batch Processor Final Output (Temp Storage)</h1>
+        <p style="text-align: center; margin-bottom: 20px;">
+            <a href="/" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">← Back to Dashboard</a> | 
+            <a href="/database" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">View NoSQL DB</a>
+        </p>
+
+        <div class="summary-box">
+            <div class="summary-item">Total Journeys (Visible)<span class="summary-value" id="sum-journeys">0</span></div>
+            <div class="summary-item">Most Active Plaza<span class="summary-value" id="sum-plaza">-</span></div>
+            <div class="summary-item">Total Duplicates Filtered<span class="summary-value" id="sum-dups">0</span></div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Plaza ID</th>
+                    <th>Tag ID</th>
+                    <th>Winning RSSI</th>
+                    <th>Lane ID</th>
+                    <th>Region</th>
+                    <th>Duplicates Filtered</th>
+                </tr>
+            </thead>
+            <tbody id="db-body">
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        async function fetchOutput() {
+            try {
+                const res = await fetch('/api/batch_output');
+                const json = await res.json();
+                const tbody = document.getElementById('db-body');
+                tbody.innerHTML = '';
+                
+                let totalJourneys = json.data.length;
+                let totalDups = 0;
+                let plazaCounts = {};
+
+                json.data.forEach(journey => {
+                    let dups = journey.duplicate_count - 1;
+                    totalDups += dups;
+                    plazaCounts[journey.plaza_id] = (plazaCounts[journey.plaza_id] || 0) + 1;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${journey.ping_timestamp}</td>
+                        <td>${journey.plaza_id}</td>
+                        <td>${journey.tag_id}</td>
+                        <td>${journey.rssi_signal_strength} dBm</td>
+                        <td>${journey.lane_id}</td>
+                        <td>${journey.region}</td>
+                        <td>${dups}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                let topPlaza = "-";
+                let maxCount = 0;
+                for (const [plaza, count] of Object.entries(plazaCounts)) {
+                    if (count > maxCount) {
+                        maxCount = count;
+                        topPlaza = plaza;
+                    }
+                }
+                
+                document.getElementById('sum-journeys').innerText = totalJourneys;
+                document.getElementById('sum-plaza').innerText = topPlaza;
+                document.getElementById('sum-dups').innerText = totalDups;
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        fetchOutput();
+        setInterval(fetchOutput, 2000);
+    </script>
+</body>
+</html>

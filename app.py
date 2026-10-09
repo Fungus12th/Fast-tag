@@ -46,6 +46,113 @@ def database():
     """Serve the database view page."""
     return render_template("database.html")
 
+@app.route("/batch_output")
+def batch_output_page():
+    """Serve the batch output view page."""
+    return render_template("batch_output.html")
+
+@app.route("/summary")
+def summary_page():
+    """Serve the summarized plaza statistics page."""
+    return render_template("summary.html")
+
+@app.route("/api/batch_output")
+def api_batch_output():
+    import json
+    import os
+    if os.path.exists("batch_output.json"):
+        with open("batch_output.json", "r") as f:
+            try:
+                data = json.load(f)
+                # Return the last 100 entries reversed (newest first)
+                return jsonify({"data": data[::-1][:100]})
+            except:
+                return jsonify({"data": []})
+    return jsonify({"data": []})
+
+@app.route("/api/batch_summary")
+def api_batch_summary():
+    import json
+    import os
+    if os.path.exists("batch_output.json"):
+        with open("batch_output.json", "r") as f:
+            try:
+                data = json.load(f)
+                summary = {}
+                for j in data:
+                    pid = j.get("plaza_id", "Unknown")
+                    if pid not in summary:
+                        summary[pid] = {
+                            "region": j.get("region", "Unknown"),
+                            "clean_journeys": 0,
+                            "duplicates_filtered": 0
+                        }
+                    summary[pid]["clean_journeys"] += 1
+                    summary[pid]["duplicates_filtered"] += max(0, j.get("duplicate_count", 1) - 1)
+                
+                # Convert to list and sort by clean journeys descending
+                result = [{"plaza_id": k, **v} for k, v in summary.items()]
+                result.sort(key=lambda x: x["clean_journeys"], reverse=True)
+                return jsonify({"data": result})
+            except:
+                pass
+    return jsonify({"data": []})
+
+@app.route("/portal")
+def user_portal():
+    """User Portal Login Page"""
+    from owners import OWNER_DATA
+    return render_template("portal.html", owners=OWNER_DATA)
+
+@app.route("/portal/<username>")
+def user_dashboard(username):
+    """User Portal Dashboard"""
+    from owners import OWNER_DATA
+    
+    # Find owner
+    owner_info = None
+    for k, v in OWNER_DATA.items():
+        if v["username"] == username:
+            owner_info = v
+            break
+            
+    if not owner_info:
+        return "User not found", 404
+        
+    return render_template("user_dashboard.html", owner=owner_info)
+
+@app.route("/api/portal/<username>/history")
+def user_history(username):
+    from owners import OWNER_DATA
+    import json
+    import os
+    
+    owner_info = None
+    for k, v in OWNER_DATA.items():
+        if v["username"] == username:
+            owner_info = v
+            break
+            
+    if not owner_info:
+        return jsonify({"data": []})
+        
+    cars = set(owner_info["cars"])
+    
+    if os.path.exists("batch_output.json"):
+        with open("batch_output.json", "r") as f:
+            try:
+                data = json.load(f)
+                # Filter journeys to only cars owned by this user
+                history = [j for j in data if j.get("tag_id") in cars]
+                # Reverse to show newest first
+                history.reverse()
+                return jsonify({"data": history[:500]}) # Max 500 records
+            except:
+                pass
+    return jsonify({"data": []})
+
+
+
 
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -294,6 +401,14 @@ if __name__ == "__main__":
     print(f"  Storage:  {type(storage).__name__}")
     print(f"  Dedup:    every {config.DEDUP_INTERVAL_SECONDS}s")
     print("=" * 60)
+
+    # Wipe previous batch output on startup to keep data fresh
+    import os
+    if os.path.exists("batch_output.json"):
+        try:
+            os.remove("batch_output.json")
+        except OSError:
+            pass
 
     # Start the background dedup worker
     if config.DEDUP_AUTO_START:

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Plaza Summary</title>
+    <style>
+        body {
+            background-color: #f2e0f2;
+            background-image: radial-gradient(#cb9acb 2px, transparent 2px);
+            background-size: 30px 30px;
+            font-family: monospace;
+            color: #111;
+            padding: 20px;
+        }
+        h1 { text-align: center; }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ccc;
+        }
+        th { background: #cb9acb; font-size: 1.1em;}
+        tr:nth-child(even) { background: #f9f9f9; }
+        tr:hover { background: #e3c3e3; }
+        .total-row {
+            font-weight: bold;
+            background: #dcdcdc !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Available Stations (Plazas) Summary</h1>
+        <p style="text-align: center; margin-bottom: 20px;">
+            <a href="/" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">← Back to Dashboard</a> | 
+            <a href="/batch_output" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">View Raw Batch Output</a>
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Plaza ID (Station)</th>
+                    <th>Region</th>
+                    <th>Clean Journeys (Pings)</th>
+                    <th>Duplicates Filtered</th>
+                </tr>
+            </thead>
+            <tbody id="summary-body">
+            </tbody>
+            <tfoot id="summary-foot">
+            </tfoot>
+        </table>
+    </div>
+    
+    <script>
+        async function fetchSummary() {
+            try {
+                const res = await fetch('/api/batch_summary');
+                const json = await res.json();
+                
+                const tbody = document.getElementById('summary-body');
+                const tfoot = document.getElementById('summary-foot');
+                tbody.innerHTML = '';
+                tfoot.innerHTML = '';
+                
+                let totalClean = 0;
+                let totalDups = 0;
+
+                json.data.forEach(station => {
+                    totalClean += station.clean_journeys;
+                    totalDups += station.duplicates_filtered;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: bold; color: #4a0b3f;">${station.plaza_id}</td>
+                        <td>${station.region}</td>
+                        <td style="font-weight: bold;">${station.clean_journeys}</td>
+                        <td>${station.duplicates_filtered}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                if (json.data.length > 0) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'total-row';
+                    tr.innerHTML = `
+                        <td colspan="2" style="text-align: right;">OVERALL TOTALS:</td>
+                        <td>${totalClean}</td>
+                        <td>${totalDups}</td>
+                    `;
+                    tfoot.appendChild(tr);
+                }
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        fetchSummary();
+        setInterval(fetchSummary, 3000);
+    </script>
+</body>
+</html>

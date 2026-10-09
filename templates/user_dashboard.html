@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ owner.name }}'s Dashboard</title>
+    <style>
+        body { font-family: sans-serif; background: #e0f2e9; padding: 20px;}
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
+        .summary-box { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; flex-wrap: wrap;}
+        .summary-item { margin: 10px 20px;}
+        .summary-title { font-size: 0.9em; color: #155724; text-transform: uppercase; font-weight: bold;}
+        .summary-value { font-size: 1.4em; color: #0b4a22; font-weight: bold; margin-top: 5px;}
+        .car-list { list-style-type: none; padding: 0; margin: 5px 0 0 0; font-size: 0.95em;}
+        .car-list li { margin-bottom: 3px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px;}
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left;}
+        th { background: #9acbb3; color: #111;}
+        tr:hover { background-color: #f1f8f4; }
+        .logout-btn { float: right; padding: 8px 12px; background: #c82333; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; font-weight: bold;}
+        .logout-btn:hover { background: #bd2130;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/portal" class="logout-btn">Log Out</a>
+        <h1 style="color: #0b4a22; margin-top: 0;">Welcome, {{ owner.name }}!</h1>
+        <p>Your FASTag travel summary and toll plaza history.</p>
+        
+        <div class="summary-box">
+            <div class="summary-item">
+                <div class="summary-title">Total Trips</div>
+                <div class="summary-value" id="stat-total">0</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-title">Most Visited Plaza</div>
+                <div class="summary-value" id="stat-plaza" style="font-size: 1.1em;">-</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-title">Trips per Vehicle</div>
+                <ul class="car-list" id="stat-cars">
+                    {% for car in owner.cars %}
+                    <li>{{ car }}: <strong>0</strong></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        <h3 style="color: #0b4a22; border-bottom: 2px solid #9acbb3; padding-bottom: 5px;">Detailed Travel Log</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Vehicle (Tag)</th>
+                    <th>Toll Plaza</th>
+                    <th>Region</th>
+                </tr>
+            </thead>
+            <tbody id="history-body">
+                <tr><td colspan="4" style="text-align: center;">Loading travel history...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <script>
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/portal/{{ owner.username }}/history');
+                const json = await res.json();
+                
+                const tbody = document.getElementById('history-body');
+                tbody.innerHTML = '';
+                
+                if (json.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No recent travel history found for your vehicles.</td></tr>';
+                    return;
+                }
+                
+                let carCounts = {};
+                let plazaCounts = {};
+                
+                json.data.forEach(trip => {
+                    // Track stats
+                    carCounts[trip.tag_id] = (carCounts[trip.tag_id] || 0) + 1;
+                    plazaCounts[trip.plaza_id] = (plazaCounts[trip.plaza_id] || 0) + 1;
+                    
+                    // Build table row
+                    const tr = document.createElement('tr');
+                    
+                    // Format date nicely
+                    const dateObj = new Date(trip.ping_timestamp);
+                    const dateStr = dateObj.toLocaleDateString();
+                    const timeStr = dateObj.toLocaleTimeString();
+                    
+                    tr.innerHTML = `
+                        <td><strong>${dateStr}</strong> <span style="color: #666; font-size: 0.9em;">${timeStr}</span></td>
+                        <td style="font-weight: bold; color: #0b4a22;">${trip.tag_id}</td>
+                        <td>${trip.plaza_id}</td>
+                        <td>${trip.region}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Calculate Most Visited
+                let mostVisited = "-";
+                let maxVisits = 0;
+                for (const [plaza, count] of Object.entries(plazaCounts)) {
+                    if (count > maxVisits) {
+                        maxVisits = count;
+                        mostVisited = plaza;
+                    }
+                }
+                
+                // Update UI Stats
+                document.getElementById('stat-total').innerText = json.data.length;
+                document.getElementById('stat-plaza').innerText = mostVisited;
+                
+                // Update per-car stats
+                let carHtml = '';
+                // Use the owner's predefined cars array to ensure all show up, even if 0
+                const registeredCars = {{ owner.cars | tojson }};
+                registeredCars.forEach(car => {
+                    let count = carCounts[car] || 0;
+                    carHtml += `<li>${car}: <strong>${count}</strong></li>`;
+                });
+                document.getElementById('stat-cars').innerHTML = carHtml;
+                
+            } catch (e) {
+                console.error("Error fetching history:", e);
+            }
+        }
+        
+        fetchHistory();
+        setInterval(fetchHistory, 3000); // Auto refresh
+    </script>
+</body>
+</html>

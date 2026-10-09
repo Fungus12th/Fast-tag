@@ -501,8 +501,12 @@
 
         <!-- HEADER -->
         <header class="header">
-            
-            <a href="/database" style="color: #0b4a22; background-color: #d4edda; text-decoration: none; font-size: 1rem; border: 2px solid #0b4a22; padding: 8px 16px; border-radius: 6px; font-weight: bold; position: absolute; right: 20px; top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000;">View Live Database</a>
+            <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; flex-wrap: wrap;">
+                <a href="/database" style="color: #0b4a22; background-color: #d4edda; text-decoration: none; font-size: 1rem; border: 2px solid #0b4a22; padding: 8px 16px; border-radius: 6px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">View Live Database</a>
+                <a href="/batch_output" style="color: #4a0b3f; background-color: #f2e0f2; text-decoration: none; font-size: 1rem; border: 2px solid #4a0b3f; padding: 8px 16px; border-radius: 6px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">View Batch Output</a>
+                <a href="/summary" style="color: #0b2e4a; background-color: #d4e7ed; text-decoration: none; font-size: 1rem; border: 2px solid #0b2e4a; padding: 8px 16px; border-radius: 6px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">View Stations Summary</a>
+                <a href="/portal" style="color: #4a2e0b; background-color: #edd4ba; text-decoration: none; font-size: 1rem; border: 2px solid #4a2e0b; padding: 8px 16px; border-radius: 6px; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Owner Portal</a>
+            </div>
             <h1>FASTag Live Ingestion Dashboard</h1>
             <p class="subtitle">High-Frequency Ingestion &amp; Deduplication Demo</p>
             <div class="live-clock" id="live-clock">--:--:--</div>
@@ -625,9 +629,9 @@
     // Actual Toll Plaza coordinates in India
     
     const KNOWN_PLAZAS = {
-        'PLAZA_NH44_DELHI':     { region: 'DELHI', name: 'Delhi Border (NH-44)' },
-        'PLAZA_NH48_MUMBAI':    { region: 'MUMBAI',  name: 'Bandra-Worli (Mumbai)' },
-        'PLAZA_NH44_CHENNAI':   { region: 'CHENNAI', name: 'Paranur (Chennai)' }
+        'Place1Delhi':     { region: 'DELHI', name: 'Delhi Border (NH-44)' },
+        'Place1Mumbai':    { region: 'MUMBAI',  name: 'Bandra-Worli (Mumbai)' },
+        'Place1Chennai':   { region: 'CHENNAI', name: 'Paranur (Chennai)' }
     };
 
 
@@ -790,9 +794,9 @@
     }
     
     function initMap() {
-        createMarker('PLAZA_NH44_DELHI', '31.7%', '41.1%', 'DELHI');
-        createMarker('PLAZA_NH48_MUMBAI', '62.5%', '24.1%', 'MUMBAI');
-        createMarker('PLAZA_NH44_CHENNAI', '76.6%', '46.3%', 'CHENNAI');
+        createMarker('Place1Delhi', '31.7%', '41.1%', 'DELHI');
+        createMarker('Place1Mumbai', '62.5%', '24.1%', 'MUMBAI');
+        createMarker('Place1Chennai', '76.6%', '46.3%', 'CHENNAI');
     }
     
     function updateMapMarkers(plazasData) {

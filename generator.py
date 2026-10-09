@@ -44,25 +44,25 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────────────────────
 PLAZA_REGISTRY = {
     "DELHI": [
-        "PLAZA_NH48_GURUGRAM",
-        "PLAZA_NH2_AGRA",
-        "PLAZA_NH48_JAIPUR",
-        "PLAZA_NH44_DELHI",
+        "Place1Delhi",
+        "Place2Delhi",
+        "Place3Delhi",
+        "Place4Delhi",
     ],
     "CHENNAI": [
-        "PLAZA_NH44_CHENNAI",
-        "PLAZA_NH44_BANGALORE",
-        "PLAZA_NH44_HYDERABAD",
+        "Place1Chennai",
+        "Place2Chennai",
+        "Place3Chennai",
     ],
     "MUMBAI": [
-        "PLAZA_NH48_MUMBAI",
-        "PLAZA_NH48_PUNE",
-        "PLAZA_NH48_AHMEDABAD",
-        "PLAZA_NH48_SURAT",
+        "Place1Mumbai",
+        "Place2Mumbai",
+        "Place3Mumbai",
+        "Place4Mumbai",
     ],
     "OTHER": [
-        "PLAZA_NH16_KOLKATA",
-        "PLAZA_NH16_BHUBANESWAR",
+        "Place1Other",
+        "Place2Other",
     ],
 }
 
@@ -100,15 +100,12 @@ class C:
 # Tag Pool — generates a fixed pool of realistic tag IDs
 # ─────────────────────────────────────────────────────────────────────────────
 def generate_tag_pool(size: int = 200) -> list[str]:
-    """Create a pool of unique FASTag RFID tag IDs."""
-    tags = []
-    for _ in range(size):
-        # Format: TAG_ + 2 uppercase letters + 4 digits + 2 uppercase letters
-        prefix = "".join(random.choices(string.ascii_uppercase, k=2))
-        digits = "".join(random.choices(string.digits, k=4))
-        suffix = "".join(random.choices(string.ascii_uppercase, k=2))
-        tags.append(f"TAG_{prefix}{digits}{suffix}")
-    return tags
+    """Create a pool of unique FASTag RFID tag IDs (now strictly 9 specific cars)."""
+    try:
+        from owners import ALL_CARS
+        return ALL_CARS
+    except ImportError:
+        return [f"TAG_CAR_{i}" for i in range(1, 10)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -121,20 +118,39 @@ def generate_ping_batch(
     region: str,
 ) -> list[dict]:
     """
-    Generate a batch of RFID pings with realistic duplicates.
-
-    Simulation strategy:
-      - Pick tags from the pool with a skewed distribution so some tags
-        (vehicles idling at barrier) appear many times.
-      - Vary RSSI per ping: base signal for the tag ± random jitter,
-        so dedup can pick the strongest signal.
+    Generate a batch of RFID pings with realistic duplicates and chaotic behavior.
     """
+    import time
     now = datetime.now(timezone.utc)
     pings = []
 
+    # Chaotic logic: Cars go "offline" for chunks of time so they don't all get 
+    # equal pings. We use 45-second buckets (slightly out of sync with 30s dedup)
+    time_bucket = int(time.time()) // 45
+    
+    active_tags = []
+    for i, tag in enumerate(tag_pool):
+        random.seed(time_bucket + i)
+        # 40% chance the car is actively driving through a toll right now
+        if random.random() < 0.4:
+            active_tags.append(tag)
+    
+    # Reset random seed back to pure randomness for the actual ping generation
+    random.seed()
+    
+    # If no cars are driving, just pick one randomly to keep data flowing
+    if not active_tags:
+        active_tags = [random.choice(tag_pool)]
+
     for _ in range(batch_size):
-        tag = random.choice(tag_pool)
-        plaza = random.choice(plazas)
+        tag = random.choice(active_tags)
+        
+        # Also limit plazas dynamically to create plaza visit imbalance
+        random.seed(time_bucket + hash(tag))
+        active_plaza = random.choice(plazas)
+        random.seed()
+        
+        plaza = active_plaza
 
         # Base RSSI for this particular ping: -25 to -65 dBm + jitter
         base_rssi = random.uniform(-65.0, -25.0)
@@ -147,7 +163,7 @@ def generate_ping_batch(
             "rssi_signal_strength":  rssi,
             "ping_timestamp":        now.isoformat(),
             "lane_id":               random.choice(LANE_IDS),
-            "region":                region,
+            "region":                next((r for r, pl in PLAZA_REGISTRY.items() if plaza in pl), region),
         })
 
     return pings
@@ -387,8 +403,8 @@ Examples:
     )
     parser.add_argument(
         "--region", "-r",
-        choices=["DELHI", "CHENNAI", "MUMBAI", "OTHER"],
-        default="DELHI",
+        choices=["ALL", "DELHI", "CHENNAI", "MUMBAI", "OTHER"],
+        default="ALL",
         help="Geographic region this generator simulates (default: NORTH)",
     )
     parser.add_argument(
@@ -408,15 +424,18 @@ Examples:
     )
     parser.add_argument(
         "--tags", "-t",
-        type=int, default=200,
-        help="Size of the unique tag pool (default: 200)",
+        type=int, default=50000,
+        help="Size of the unique tag pool (default: 50000)",
     )
 
     args = parser.parse_args()
 
     base_url = f"http://{args.server}:{args.port}"
     region = args.region
-    plazas = PLAZA_REGISTRY.get(region, PLAZA_REGISTRY["DELHI"])
+    if region == "ALL":
+        plazas = [p for r in PLAZA_REGISTRY.values() for p in r]
+    else:
+        plazas = PLAZA_REGISTRY.get(region, PLAZA_REGISTRY["DELHI"])
 
     # ─── Banner ──────────────────────────────────────────────────────────
     print(f"""

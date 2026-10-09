@@ -1,4 +1,4 @@
-﻿"""
+"""
 FASTag DA-2 â€” Batch Deduplication Worker
 Periodically scans recent pings, groups by tag_id, picks the one with highest RSSI
 (closest to antenna) per tag per plaza, and produces "billable journeys."
@@ -162,6 +162,25 @@ class BatchDeduplicator:
                 f"[DEDUP] Run complete: {raw_count} raw pings -> {journey_count} journeys "
                 f"({dedup_ratio}% duplicates filtered)"
             )
+
+            # Temp storage for the output
+            try:
+                import json
+                import os
+                out_file = "batch_output.json"
+                existing = []
+                if os.path.exists(out_file):
+                    with open(out_file, "r") as f:
+                        try:
+                            existing = json.load(f)
+                        except json.JSONDecodeError:
+                            pass
+                existing.extend(journeys)
+                with open(out_file, "w") as f:
+                    json.dump(existing, f, indent=4)
+            except Exception as e:
+                print(f"[DEDUP] Error saving temp output: {e}")
+
 
             return {
                 "raw_count":     raw_count,

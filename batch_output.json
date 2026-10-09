@@ -1,0 +1,128 @@
+[
+    {
+        "plaza_id": "Place1Chennai",
+        "tag_id": "Car3Ravi",
+        "rssi_signal_strength": -16.1,
+        "ping_timestamp": "2026-10-09T19:11:58.485219+00:00",
+        "lane_id": "LANE_2",
+        "region": "CHENNAI",
+        "duplicate_count": 19286
+    },
+    {
+        "plaza_id": "Place1Chennai",
+        "tag_id": "Car3Amit",
+        "rssi_signal_strength": -14.8,
+        "ping_timestamp": "2026-10-09T19:11:54.070330+00:00",
+        "lane_id": "LANE_4",
+        "region": "CHENNAI",
+        "duplicate_count": 19200
+    },
+    {
+        "plaza_id": "Place2Chennai",
+        "tag_id": "Car3Priya",
+        "rssi_signal_strength": -16.9,
+        "ping_timestamp": "2026-10-09T19:11:56.987759+00:00",
+        "lane_id": "LANE_1",
+        "region": "CHENNAI",
+        "duplicate_count": 20472
+    },
+    {
+        "plaza_id": "Place2Chennai",
+        "tag_id": "Car1Amit",
+        "rssi_signal_strength": -15.4,
+        "ping_timestamp": "2026-10-09T19:11:56.856696+00:00",
+        "lane_id": "LANE_1",
+        "region": "CHENNAI",
+        "duplicate_count": 19065
+    },
+    {
+        "plaza_id": "Place1Chennai",
+        "tag_id": "Car2Ravi",
+        "rssi_signal_strength": -18.4,
+        "ping_timestamp": "2026-10-09T19:12:00.541942+00:00",
+        "lane_id": "LANE_4",
+        "region": "CHENNAI",
+        "duplicate_count": 982
+    },
+    {
+        "plaza_id": "Place3Chennai",
+        "tag_id": "Car2Amit",
+        "rssi_signal_strength": -19.2,
+        "ping_timestamp": "2026-10-09T19:12:00.179525+00:00",
+        "lane_id": "LANE_1",
+        "region": "CHENNAI",
+        "duplicate_count": 977
+    },
+    {
+        "plaza_id": "Place3Chennai",
+        "tag_id": "Car2Priya",
+        "rssi_signal_strength": -18.1,
+        "ping_timestamp": "2026-10-09T19:12:00.209858+00:00",
+        "lane_id": "LANE_1",
+        "region": "CHENNAI",
+        "duplicate_count": 1018
+    },
+    {
+        "plaza_id": "Place1Chennai",
+        "tag_id": "Car3Ravi",
+        "rssi_signal_strength": -16.1,
+        "ping_timestamp": "2026-10-09T19:11:58.485219+00:00",
+        "lane_id": "LANE_2",
+        "region": "CHENNAI",
+        "duplicate_count": 19286
+    },
+    {
+        "plaza_id": "Place1Chennai",
+        "tag_id": "Car3Amit",
+        "rssi_signal_strength": -14.8,
+        "ping_timestamp": "2026-10-09T19:11:54.070330+00:00",
+        "lane_id": "LANE_4",
+        "region": "CHENNAI",
+        "duplicate_count": 19200
+    },
+    {
+        "plaza_id": "Place2Chennai",
+        "tag_id": "Car3Priya",
+        "rssi_signal_strength": -13.4,
+        "ping_timestamp": "2026-10-09T19:12:10.108063+00:00",
+        "lane_id": "LANE_4",
+        "region": "CHENNAI",
+        "duplicate_count": 43877
+    },
+    {
+        "plaza_id": "Place2Chennai",
+        "tag_id": "Car1Amit",
+        "rssi_signal_strength": -15.4,
+        "ping_timestamp": "2026-10-09T19:11:56.856696+00:00",
+        "lane_id": "LANE_1",
+        "region": "CHENNAI",
+        "duplicate_count": 19065
+    },
+    {
+        "plaza_id": "Place1Chennai",
+        "tag_id": "Car2Ravi",
+        "rssi_signal_strength": -13.7,
+        "ping_timestamp": "2026-10-09T19:12:13.238355+00:00",
+        "lane_id": "LANE_3",
+        "region": "CHENNAI",
+        "duplicate_count": 24629
+    },
+    {
+        "plaza_id": "Place3Chennai",
+        "tag_id": "Car2Amit",
+        "rssi_signal_strength": -17.1,
+        "ping_timestamp": "2026-10-09T19:12:11.523978+00:00",
+        "lane_id": "LANE_1",
+        "region": "CHENNAI",
+        "duplicate_count": 24517
+    },
+    {
+        "plaza_id": "Place3Chennai",
+        "tag_id": "Car2Priya",
+        "rssi_signal_strength": -14.8,
+        "ping_timestamp": "2026-10-09T19:12:10.540160+00:00",
+        "lane_id": "LANE_4",
+        "region": "CHENNAI",
+        "duplicate_count": 24426
+    }
+]

@@ -5,8 +5,8 @@
     <title>Plaza Summary</title>
     <style>
         body {
-            background-color: #f2e0f2;
-            background-image: radial-gradient(#cb9acb 2px, transparent 2px);
+            background-color: var(--bg);
+            background-image: radial-gradient(var(--primary-soft) 2px, transparent 2px);
             background-size: 30px 30px;
             font-family: monospace;
             color: #111;
@@ -31,21 +31,22 @@
             padding: 12px;
             border-bottom: 1px solid #ccc;
         }
-        th { background: #cb9acb; font-size: 1.1em;}
+        th { background: var(--primary-soft); font-size: 1.1em;}
         tr:nth-child(even) { background: #f9f9f9; }
-        tr:hover { background: #e3c3e3; }
+        tr:hover { background: var(--primary-soft); }
         .total-row {
             font-weight: bold;
             background: #dcdcdc !important;
         }
-    </style>
+    body{background:var(--bg);background-image:linear-gradient(180deg,var(--primary-soft),var(--bg) 280px);color:var(--text);font-family:var(--font-body)}.container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg)}h1{font-family:var(--font-display);color:var(--text)}a{color:var(--primary)!important}th{background:var(--surface-alt);color:var(--text-muted);position:sticky;top:0;z-index:1}th,td{border-bottom-color:var(--border)}tr:nth-child(even){background:var(--surface-alt)}tr:hover{background:var(--primary-soft)}.total-row{background:var(--primary-soft)!important}</style>
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
     <div class="container">
         <h1>Available Stations (Plazas) Summary</h1>
         <p style="text-align: center; margin-bottom: 20px;">
-            <a href="/" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">← Back to Dashboard</a> | 
-            <a href="/batch_output" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">View Raw Batch Output</a>
+            <a href="/" style="color: var(--primary); text-decoration: none; font-weight: bold;">← Back to Dashboard</a> | 
+            <a href="/batch_output" style="color: var(--primary); text-decoration: none; font-weight: bold;">View Raw Batch Output</a>
         </p>
 
         <table>
@@ -84,7 +85,7 @@
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td style="font-weight: bold; color: #4a0b3f;">${station.plaza_id}</td>
+                        <td style="font-weight: bold; color: var(--primary);">${station.plaza_id}</td>
                         <td>${station.region}</td>
                         <td style="font-weight: bold;">${station.clean_journeys}</td>
                         <td>${station.duplicates_filtered}</td>

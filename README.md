@@ -1,93 +1,150 @@
-# FASTag High-Frequency Toll Reconciliation Ledger
+# 🚗 FASTag Distributed Toll Reconciliation Ledger & DDBMS
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Architecture: DDBMS](https://img.shields.io/badge/Architecture-DDBMS%20%7C%203NF%20ACID-0284c7.svg)](#-distributed-database-management-system-ddbms)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![UI: Sky/Ice Blue SaaS](https://img.shields.io/badge/UI-Sky%2FIce%20Blue%20Vanilla%20SaaS-0ea5e9.svg)](#-user-interface--screens)
 
-A hybrid polyglot-persistence design for real-time highway toll collection. This project simulates a high-frequency FASTag RFID ingestion engine capable of processing tens of thousands of pings per second, deduplicating them into clean journey records, and visualizing the live network traffic across India.
+A production-grade, distributed IoT ingestion, stream deduplication, and ACID relational financial ledger system modeling India’s **National Electronic Toll Collection (NETC FASTag)** infrastructure. 
 
----
-
-## 🏗 Architecture Overview
-
-1. **The Generators (`generator.py`):** Simulate toll plazas at various geographic locations (Delhi, Mumbai, Chennai) pinging the central server with raw RFID data.
-2. **The Ingestion Server (`app.py`):** A Flask backend that receives raw pings and stores them instantly. It uses an adaptive storage fallback mechanism (starts with ultra-fast `InMemoryStorage` and scales to distributed `Cassandra`).
-3. **The Deduplicator:** A background worker running in the central server that sweeps raw pings every 30 seconds to extract clean, deduplicated vehicle journeys.
-4. **The Live Dashboard:** A web-based visualizer that provides a real-time, zero-refresh look at the network's throughput and deduplication metrics, complete with an interactive map of India.
+The system transitions millions of noisy, high-frequency radio sensor telemetry pings into verifiable banking transactions, architected as a full **Distributed Database Management System (DDBMS)** with autonomous regional edge nodes, horizontal and vertical fragmentation, and federated query processing.
 
 ---
 
-## 🚀 Getting Started (Single Machine)
+## 🏗️ 4-Layer Architecture Overview
+
+```
+                       HIGH-FREQUENCY IoT SENSORS (RFID PINGS)
+           [ Delhi ]   [ Mumbai ]   [ Chennai ]   [ Bengaluru ]   [ Kolkata ] ...
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 1: INGESTION TIER (NoSQL / In-Memory Ring Buffers)                    │
+│ • Lock-protected deque ring buffer (100k cap) / Cassandra cluster fallback  │
+│ • Sustained ingestion: 1,800–2,500+ pings/sec with sub-millisecond writes   │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 2: STREAM DEDUPLICATION ENGINE (Windowed Spatial/Temporal Grouping)  │
+│ • 10-second sliding time window aggregation                                │
+│ • Filters 98–99% sensor noise; extracts winning ping via max RSSI (dBm)     │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 3: 3NF RELATIONAL ACID LEDGER (Central Coordinator Master)            │
+│ • SQLite WAL Mode: fastag_ledger.db                                         │
+│ • BEGIN IMMEDIATE atomic transaction boundaries with CHECK balance guards   │
+│ • Dynamic vehicle multipliers (Car 1.0x, Bus 2.0x, Truck 3.0x)             │
+│ • Spatiotemporal fraud detection ("Impossible Travel" / Cloned Tag Alert)   │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │ (2PC Replicate / Scatter)
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LAYER 4: DISTRIBUTED DATABASE MANAGEMENT SYSTEM (DDBMS CORE)                │
+│ • 10 Physical Regional Edge Node DBs: data/nodes/<city>_node.db             │
+│ • Primary Horizontal Fragmentation: σ(region='CITY')(Journeys)              │
+│ • Vertical Fragmentation: Edge Operational Fragment vs Central Financial    │
+│ • Distributed Query Processor (DQP): Predicate pushdown & node pruning      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🌐 Distributed Database Management System (DDBMS)
+
+### 1. Primary Horizontal Fragmentation ($\sigma$)
+The logical relations `Journeys` and `Toll_Plazas` are partitioned across **10 physical regional node databases** in `data/nodes/<city>_node.db`:
+$$\text{Journeys}_{\text{City}_i} = \sigma_{\text{region} = \text{City}_i}(\text{Journeys})$$
+- **Disjointness Guaranteed:** $\text{Journeys}_i \cap \text{Journeys}_j = \emptyset$ (for $i \neq j$).
+- **Completeness Guaranteed:** $\text{Journeys} = \bigcup_{i=1}^{10} \text{Journeys}_{\text{City}_i}$.
+
+### 2. Vertical Fragmentation ($\pi$) & Lossless Join
+To simulate edge-computing security and latency requirements, vehicle profiles are decomposed into:
+- **Operational Edge Fragment (`Edge_Tags_Cache`)**:
+  $$\pi_{\text{tag\_id, registration\_no, vehicle\_class, status, home\_region}}(\text{Vehicles} \bowtie \text{RFID\_Tags})$$
+  Replicated on local regional nodes (`data/nodes/<city>_node.db`) to enable sub-millisecond RFID gate verification without exposing user personal data or bank balances at highway booths.
+- **Central Financial Fragment**:
+  $$\pi_{\text{user\_id, full\_name, phone\_number, current\_balance}}(\text{Users} \bowtie \text{Wallet\_Ledgers})$$
+  Maintained strictly on the Central Coordinator node (`fastag_ledger.db`).
+- **Lossless Join Reconstruction ($\bowtie$)**:
+  $$\text{Full\_Vehicle\_Profile} = \text{Edge\_Tags\_Cache} \bowtie_{\text{tag\_id}} \text{Central\_Financial\_Fragment}$$
+
+### 3. Distributed Query Processor (DQP)
+The query engine parses global SQL and executes:
+1. **Query Decomposition & Localization:** Translates logical queries into local fragment operations (`Journeys` $\to$ `Journeys_Local`).
+2. **Predicate Pushdown & Node Pruning:** Automatically identifies selection predicates (e.g. `WHERE region = 'CHENNAI'`), prunes non-matching nodes, and targets the specific edge node directly.
+3. **Parallel Asynchronous Scatter:** Broadcasts subqueries across regional WAL databases concurrently via a thread pool.
+4. **Distributed Gather & Merge:** Unions fragments and renders a transparent **Distributed Execution Plan** showing node latencies and pruning statistics.
+
+---
+
+## 🔐 Multi-Tier Role-Based Access Control (RBAC)
+
+The application provides a unified login portal at `/login` with strict role segregation:
+
+| Role | Demo Credentials | Scope & Accessible Views |
+| :--- | :--- | :--- |
+| **Global Admin** | `admin` / `admin123` | Master operations across all 10 cities, Global SQL Console with DQP, 3NF Ledger Inspector, DDBMS Architecture visualizer. |
+| **City Station Officers** | `chennai` / `chennai123`<br>`mumbai` / `mumbai123`<br>`delhi` / `delhi123`<br>*(10 cities available)* | Confined strictly to `/city/<city_name>`. Dedicated **Local Node SQL Query Terminal** directly bound to `data/nodes/<city>_node.db`. Barred from accessing other cities. |
+| **Vehicle Owners** | `priya` / `priya123`<br>`ravi` / `ravi123`<br>`amit` / `amit123`<br>*(10 owners available)* | Confined strictly to `/portal/<username>`. Personal wallet balance, RFID asset management, vehicle class badges, and personal journey history. Zero admin access. |
+
+---
+
+## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
-Ensure you have Python installed. Clone the repository and install the backend dependencies on your main machine:
+- Python 3.10+
+- Linux, macOS, or Windows WSL
+
+### 2. Setup Virtual Environment & Dependencies
 ```bash
+git clone https://github.com/Fungus12th/Fast-tag.git
+cd Fast-tag
+
 python3 -m venv .venv
 source .venv/bin/activate
-pip install flask cassandra-driver requests
+pip install flask cassandra-driver requests jinja2
 ```
 
-### 2. Start the Main Server
-Launch the central Ingestion API and Dashboard server:
+### 3. Start the Ingestion & DDBMS Server
 ```bash
+# Starts server on port 5000 (or pass FASTAG_PORT=5001)
 python app.py
 ```
-*The server will boot up using `InMemoryStorage` by default. You can now visit `http://localhost:5000` in your browser.*
+*On first boot, the database automatically initializes the seed data: 10 vehicle owners, 30 mixed-class vehicles, 30 RFID tags, 30 toll plazas across 10 cities, and all 10 regional edge databases.*
 
-### 3. Start a Local Data Generator
-In a new terminal window (ensure your `.venv` is activated), start pumping simulated data:
+### 4. Start the Traffic Load Generator
+In a separate terminal window:
 ```bash
-python generator.py --region DELHI --workers 2
-```
-
----
-
-## 🌐 The Multi-Laptop Demo Setup
-
-To truly see the system shine, you can run the generators on entirely different laptops connected to the same Wi-Fi network, pointing them all at your main server.
-
-### Step 1: Find your Main Server's IP Address
-On the laptop running `app.py`, open a terminal and run:
-```bash
-hostname -I
-```
-*(Take note of the IP address, e.g., `192.168.1.100`)*
-
-### Step 2: Prepare the "Client" Laptops
-On any other laptop on the same network, copy over `generator.py` and install the required library in a virtual environment:
-```bash
-python3 -m venv .venv
 source .venv/bin/activate
-pip install requests
-```
 
-### Step 3: Unleash the Data!
-Run the generator on the client laptops, pointing them to the Main Server's IP. 
-
-**Delhi Laptop:**
-```bash
-python generator.py --server 192.168.1.100 --region DELHI --workers 2
+# Stream high-frequency RFID pings across all 10 Indian cities
+python generator.py --server 127.0.0.1 --port 5000 --region ALL --workers 2 --batch 200 --delay 0.3
 ```
-**Mumbai Laptop:**
-```bash
-python generator.py --server 192.168.1.100 --region MUMBAI --workers 2
-```
-**Chennai Laptop:**
-```bash
-python generator.py --server 192.168.1.100 --region CHENNAI --workers 2
-```
-
-Watch the live map light up instantly on your main server's dashboard at `http://localhost:5000`!
 
 ---
 
-## ⚙️ Configuration & Controls
+## 🖥️ User Interface & Screens
 
-- **Raw Database View:** Visit `http://localhost:5000/database` to watch the raw JSON ingestion stream in real-time.
-- **Deduplication Interval:** Use the slider on the main dashboard to control how often the backend deduplicator sweeps the raw data for clean journeys.
-- **Generator Throttle:** You can increase the load by adding more workers or increasing the batch size:
-  ```bash
-  python generator.py --server 192.168.1.100 --region DELHI --workers 5 --batch 1000
-  ```
+- **Live Nationwide Dashboard (`/dashboard`):** Real-time throughput graph (Chart.js), deduplication noise reduction gauge, interactive 10-city India Toll Plaza radar map canvas with pulse rings, and sortable per-plaza metrics.
+- **DDBMS Architecture Visualizer (`/ddbms`):** Live topology map cards (Coordinator $\leftrightarrow$ 10 Regional Nodes), horizontal fragmentation catalog table, interactive Lossless Join Reconstructor widget, and 4-phase DQP breakdown.
+- **Global SQL Console (`/sql_console`):** Target Node Selector (`COORDINATOR` vs `FEDERATED` vs 10 individual edge nodes), Viva-ready analytical presets, dark slate editor, and real-time visual Distributed Execution Plan (DQP) visualizer.
+- **City Station Node (`/city/<city_name>`):** Local station metrics, local plaza breakdown, Vertical Edge Fragment table (`Edge_Tags_Cache`), and embedded interactive Local Node SQL Query Terminal.
+- **Vehicle Owner Portal (`/portal/<username>`):** Sky/Ice blue gradient wallet card with atomic instant top-up buttons, vehicle RFID asset chips, and real-time transaction ledger.
+- **3NF SQL Ledger (`/sql_ledger`):** Interactive segmented tab inspector across all 6 relational tables (`Users`, `Wallet_Ledgers`, `Vehicles`, `RFID_Tags`, `Toll_Plazas`, `Journeys`).
 
-## 🧹 Resetting the Data
-Because the application leverages high-speed in-memory storage, wiping the slate clean is as simple as restarting the `app.py` script. All counters, logs, and database entries will reset to zero.
+---
+
+## 📚 Deep-Dive Technical Documentation
+
+For complete mathematical models, schema normalization proofs, and core code implementations:
+- [📖 **Backend Architecture Deep Dive** (`docs/BACKEND_ARCHITECTURE.md`)](docs/BACKEND_ARCHITECTURE.md)
+- [🎨 **Frontend Architecture Deep Dive** (`docs/FRONTEND_ARCHITECTURE.md`)](docs/FRONTEND_ARCHITECTURE.md)
+
+---
+
+## 🛡️ License
+
+This project is licensed under the [MIT License](LICENSE).

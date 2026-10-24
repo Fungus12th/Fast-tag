@@ -1,16 +1,37 @@
-# Project Documents
-FASTag_DA1_Report.docx
-PPT.pptx
-extracted_content.txt
-
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-venv/
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual Environment & Config
 .venv/
+venv/
 env/
 .env
 
-# Virtual Environment
-.venv/
+# SQLite Databases & Regional Node Fragments
+*.db
+*.db-shm
+*.db-wal
+fastag_ledger.db*
+data/nodes/*.db*
+!data/nodes/.gitkeep
+
+# Logs & Session Test Artifacts
+*.log
+cookies*.txt
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Project Documents
+FASTag_DA1_Report.docx
+PPT.pptx
+extracted_content.txt

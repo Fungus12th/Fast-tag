@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASTag — DDBMS Architecture</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <style>
+        .page { max-width: 1440px; margin: 0 auto; padding: 18px 24px 48px; }
+        .brand { font-family: var(--font-display); font-weight: 700; color: var(--primary); font-size: 1.05rem; white-space: nowrap; }
+        .banner { padding: 28px 30px; margin-bottom: 24px; background: linear-gradient(115deg, var(--surface) 0%, #f0f9ff 100%); }
+        .eyebrow, .section-kicker { color: var(--primary); font: 700 .75rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+        .banner h1 { font: 700 clamp(1.65rem, 3vw, 2.45rem) var(--font-display); letter-spacing: -.035em; margin: 6px 0 9px; }
+        .banner p { color: var(--text-muted); max-width: 840px; }
+        .banner-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+        .meta-chip { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); font-size: .86rem; }
+        .meta-chip strong { font-family: var(--font-mono); font-size: .8rem; }
+        section { margin-top: 30px; }
+        .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 14px; }
+        .section-heading h2 { font: 700 1.35rem var(--font-display); margin-top: 3px; }
+        .section-heading p { color: var(--text-muted); font-size: .9rem; max-width: 620px; }
+        .coordinator { border-left: 4px solid var(--primary); margin-bottom: 14px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 18px; }
+        .coordinator h3 { font: 700 1.05rem var(--font-display); }
+        .coordinator small, .node-path, .mono { font-family: var(--font-mono); color: var(--text-muted); font-size: .78rem; }
+        .coordinator-stats { display: flex; gap: 22px; text-align: right; }
+        .stat-value { display: block; color: var(--primary); font: 700 1.2rem var(--font-display); }
+        .stat-label { color: var(--text-faint); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
+        .node-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+        .node-card { padding: 16px; min-width: 0; }
+        .node-top { display: flex; justify-content: space-between; gap: 7px; align-items: start; margin-bottom: 13px; }
+        .node-card h3 { font: 700 1rem var(--font-display); }
+        .status { display: inline-flex; align-items: center; gap: 5px; border-radius: var(--radius-pill); padding: 3px 8px; font-size: .66rem; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+        .status::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .status.online { color: #15803d; background: var(--success-bg); }
+        .status.offline { color: #b91c1c; background: var(--danger-bg); }
+        .status.degraded { color: #b45309; background: var(--warning-bg); }
+        .node-detail { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 9px; }
+        .node-detail label { display: block; color: var(--text-faint); font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+        .node-detail p { overflow-wrap: anywhere; }
+        .node-count { color: var(--text); font: 700 1.25rem var(--font-display); }
+        .table-wrap { overflow-x: auto; }
+        .formula { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .formula .saas-callout { margin: 0; }
+        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .fragment-card { padding: 20px; }
+        .fragment-card h3 { font: 700 1rem var(--font-display); margin-bottom: 6px; }
+        .fragment-card.central { border-top: 3px solid var(--primary); }
+        .fragment-card.edge { border-top: 3px solid var(--success); }
+        .fragment-card p { color: var(--text-muted); font-size: .86rem; margin-bottom: 14px; }
+        .field-list { display: flex; flex-wrap: wrap; gap: 7px; list-style: none; }
+        .field-list li { padding: 5px 9px; border-radius: var(--radius-sm); background: var(--surface-alt); border: 1px solid var(--border); font: 600 .73rem var(--font-mono); }
+        .reconstruct { margin-top: 16px; }
+        .result-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 22px 0 10px; }
+        .result-head h3 { font: 700 1rem var(--font-display); }
+        .hidden { display: none !important; }
+        .dqp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .phase { padding: 18px; position: relative; }
+        .phase-number { color: var(--primary); font: 700 1.7rem var(--font-display); }
+        .phase h3 { font: 700 .95rem var(--font-display); margin: 5px 0; }
+        .phase p { color: var(--text-muted); font-size: .82rem; }
+        .empty { color: var(--text-muted); padding: 20px; text-align: center; }
+        @media (max-width: 1100px) { .node-grid { grid-template-columns: repeat(3, 1fr); } .dqp { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 700px) { .page { padding: 12px 14px 35px; } .node-grid, .split, .formula, .dqp { grid-template-columns: 1fr; } .coordinator { align-items: start; flex-direction: column; } .coordinator-stats { text-align: left; } .saas-nav { align-items: start; } }
+    </style>
+</head>
+<body>
+<main class="page">
+    <nav class="saas-nav" aria-label="Primary navigation">
+        <div class="brand">⚡ FASTag Control Plane</div>
+        <div class="saas-nav-links">
+            <a class="saas-nav-link" href="/dashboard">Live Dashboard</a>
+            <a class="saas-nav-link" href="/sql_ledger">3NF SQL Ledger</a>
+            <a class="saas-nav-link" href="/sql_console">SQL Console</a>
+            <a class="saas-nav-link active" href="/ddbms">🌐 DDBMS Architecture</a>
+            <a class="saas-nav-link" href="/batch_output">Batch Output</a>
+            <a class="saas-nav-link" href="/summary">Summary</a>
+            <a class="saas-nav-link" href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <header class="saas-card banner">
+        <div class="eyebrow">Distributed systems observability</div>
+        <h1>Distributed Database Management System (DDBMS) Architecture</h1>
+        <p>FASTag’s coordinator and regional SQLite edge fragments keep toll authorization local while preserving a consistent central financial ledger.</p>
+        <div class="banner-meta">
+            <div class="meta-chip">☁️ Coordinator <strong>COORDINATOR_MASTER_01</strong><span class="mono">({{ catalog.coordinator.db_file }})</span></div>
+            <div class="meta-chip">🌐 <strong>{{ catalog.total_nodes }}</strong> Regional Edge Nodes <span class="mono">data/nodes/&lt;city&gt;_node.db</span></div>
+        </div>
+    </header>
+
+    <section>
+        <div class="section-heading"><div><div class="section-kicker">Section 1 · topology</div><h2>Distributed System Topology &amp; Regional Nodes</h2></div><p>Each node owns a disjoint regional horizontal fragment and serves low-latency local operations.</p></div>
+        <div class="saas-card coordinator">
+            <div><h3>☁️ Central Coordinator · COORDINATOR_MASTER_01</h3><small>{{ catalog.coordinator.db_file }} · {{ catalog.coordinator.role }}</small></div>
+            <div class="coordinator-stats"><div><span class="stat-value" id="coordinator-status">{{ catalog.coordinator.status }}</span><span class="stat-label">Status</span></div><div><span class="stat-value" id="coordinator-size">{{ catalog.coordinator.size_kb }} KB</span><span class="stat-label">Disk footprint</span></div></div>
+        </div>
+        <div class="node-grid" id="node-grid">
+        {% for node in catalog.nodes %}
+            <article class="saas-card node-card" data-city="{{ node.city_key }}">
+                <div class="node-top"><h3>{{ node.city_name if node.city_key != 'DELHI' else 'Delhi' }}</h3><span class="status {{ node.status|lower }}" data-status>{{ node.status }}</span></div>
+                <div class="node-detail"><label>Physical database</label><p class="node-path">{{ node.db_path }}</p></div>
+                <div class="node-detail"><label>Partition predicate</label><p class="mono">{{ node.predicate }}</p></div>
+                <div class="node-detail"><label>Journeys_Local rows</label><p class="node-count" data-count>{{ node.journeys_count }}</p></div>
+            </article>
+        {% endfor %}
+        </div>
+    </section>
+
+    <section>
+        <div class="section-heading"><div><div class="section-kicker">Section 2 · horizontal fragmentation</div><h2>Horizontal Fragmentation (σ)</h2></div><p>Selection predicates route each journey to exactly one physical SQLite node.</p></div>
+        <div class="saas-card table-wrap"><table class="saas-table"><thead><tr><th>Fragment name</th><th>Predicate</th><th>Table</th><th>Physical SQLite file</th><th>Row count</th></tr></thead><tbody id="fragment-rows">
+        {% for node in catalog.nodes %}<tr data-city="{{ node.city_key }}"><td class="mono">Journeys_{{ node.city_key|title }}</td><td class="mono">σ(region='{{ node.city_key }}')</td><td class="mono">Journeys_Local</td><td class="mono">{{ node.db_path }}</td><td data-fragment-count>{{ node.journeys_count }}</td></tr>{% endfor %}
+        </tbody></table></div>
+        <div class="formula"><div class="saas-callout"><strong>Completeness:</strong> Journeys = ⋃ σ<sub>region='CITY'</sub>(Journeys). Every toll passage is represented by one regional fragment.</div><div class="saas-callout"><strong>Disjointness:</strong> Journeys<sub>i</sub> ∩ Journeys<sub>j</sub> = ∅ for i ≠ j. A region predicate prevents overlapping ownership.</div></div>
+    </section>
+
+    <section>
+        <div class="section-heading"><div><div class="section-kicker">Section 3 · privacy-preserving reconstruction</div><h2>Vertical Fragmentation (π) &amp; Lossless Join Reconstructor</h2></div><p>Operational edge data is separated from central identity and financial data, then reconstructed through the shared key.</p></div>
+        <div class="split">
+            <article class="saas-card fragment-card edge"><h3>⚙️ Operational Edge Fragment</h3><p><strong>Edge_Tags_Cache</strong> · Regional nodes · fast gate authorization without financial PII</p><ul class="field-list"><li>tag_id</li><li>registration_no</li><li>vehicle_class</li><li>status</li><li>home_region</li></ul></article>
+            <article class="saas-card fragment-card central"><h3>💳 Central Financial Fragment</h3><p><strong>Users + Wallet_Ledgers</strong> · Coordinator · ACID balances and owner identity</p><ul class="field-list"><li>user_id</li><li>full_name</li><li>phone_number</li><li>current_balance</li></ul></article>
+        </div>
+        <div class="reconstruct"><button class="saas-btn saas-btn-primary" id="reconstruct-btn" type="button">▶ Verify Lossless Join Reconstruction</button><span id="reconstruct-message" class="mono" aria-live="polite"></span></div>
+        <div id="reconstruct-result" class="saas-card hidden"><div class="result-head"><h3>Vehicle_Full_Profile · Edge_Tags_Cache ⨝ Central Financial Fragment</h3><span class="saas-badge saas-badge-success">✓ LOSSLESS JOIN VERIFIED</span></div><div class="table-wrap"><table class="saas-table"><thead><tr><th>Tag ID</th><th>Registration</th><th>Vehicle class</th><th>Status</th><th>Owner</th><th>Phone</th><th>Wallet balance</th></tr></thead><tbody id="reconstruct-rows"></tbody></table></div></div>
+    </section>
+
+    <section>
+        <div class="section-heading"><div><div class="section-kicker">Section 4 · query execution</div><h2>Distributed Query Processing (DQP)</h2></div><p>Queries are localized before parallel execution so irrelevant partitions never receive the request.</p></div>
+        <div class="dqp"><article class="saas-card phase"><div class="phase-number">01</div><h3>Decompose &amp; Localize</h3><p>Parse the global relation and map Journeys to each Journeys_Local fragment.</p></article><article class="saas-card phase"><div class="phase-number">02</div><h3>Push Predicates</h3><p>Apply filters at the edge so only qualifying rows cross the network boundary.</p></article><article class="saas-card phase"><div class="phase-number">03</div><h3>Scatter in Parallel</h3><p>Dispatch localized subqueries concurrently to active regional WAL nodes.</p></article><article class="saas-card phase"><div class="phase-number">04</div><h3>Gather &amp; Merge</h3><p>Union the results at the coordinator and return a transparent execution plan.</p></article></div>
+    </section>
+</main>
+<script>
+(() => {
+    const text = (value) => document.createTextNode(value == null ? '—' : String(value));
+    function updateCatalog(catalog) {
+        (catalog.nodes || []).forEach(node => {
+            const card = document.querySelector(`#node-grid [data-city="${node.city_key}"]`);
+            if (!card) return;
+            const status = card.querySelector('[data-status]');
+            status.textContent = node.status;
+            status.className = `status ${(node.status || '').toLowerCase()}`;
+            card.querySelector('[data-count]').textContent = node.journeys_count;
+            const row = document.querySelector(`#fragment-rows [data-city="${node.city_key}"]`);
+            if (row) row.querySelector('[data-fragment-count]').textContent = node.journeys_count;
+        });
+        if (catalog.coordinator) {
+            document.getElementById('coordinator-status').textContent = catalog.coordinator.status;
+            document.getElementById('coordinator-size').textContent = `${catalog.coordinator.size_kb} KB`;
+        }
+    }
+    async function pollCatalog() { try { const response = await fetch('/api/ddbms/catalog', { cache: 'no-store' }); if (response.ok) updateCatalog(await response.json()); } catch (_) {} }
+    pollCatalog();
+    setInterval(pollCatalog, 3000);
+
+    document.getElementById('reconstruct-btn').addEventListener('click', async function () {
+        const button = this, message = document.getElementById('reconstruct-message');
+        button.disabled = true; message.textContent = ' Reconstructing…';
+        try {
+            const response = await fetch('/api/ddbms/reconstruct?limit=15', { cache: 'no-store' });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Reconstruction failed');
+            const tbody = document.getElementById('reconstruct-rows'); tbody.replaceChildren();
+            (result.reconstructed_relation || []).forEach(row => {
+                const tr = document.createElement('tr');
+                ['tag_id','registration_no','vehicle_class','status','owner_name','phone','wallet_balance'].forEach(key => { const td = document.createElement('td'); td.appendChild(text(row[key])); tr.appendChild(td); });
+                tbody.appendChild(tr);
+            });
+            document.getElementById('reconstruct-result').classList.remove('hidden'); message.textContent = ` ${result.count} profile(s) reconstructed from ${result.join_key}.`;
+        } catch (error) { message.textContent = ` ${error.message}`; }
+        finally { button.disabled = false; }
+    });
+})();
+</script>
+</body>
+</html>

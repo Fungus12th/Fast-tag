@@ -5,8 +5,8 @@
     <title>Batch Processor Output</title>
     <style>
         body {
-            background-color: #f2e0f2;
-            background-image: radial-gradient(#cb9acb 2px, transparent 2px);
+            background-color: var(--bg);
+            background-image: radial-gradient(var(--primary-soft) 2px, transparent 2px);
             background-size: 30px 30px;
             font-family: monospace;
             color: #111;
@@ -24,7 +24,7 @@
         .summary-box {
             display: flex;
             justify-content: space-around;
-            background: #e3c3e3;
+            background: var(--primary-soft);
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -36,7 +36,7 @@
         }
         .summary-value {
             font-size: 1.8em;
-            color: #4a0b3f;
+            color: var(--primary);
             display: block;
             margin-top: 5px;
         }
@@ -49,16 +49,17 @@
             padding: 10px;
             border-bottom: 1px solid #ccc;
         }
-        th { background: #cb9acb; }
+        th { background: var(--primary-soft); }
         tr:nth-child(even) { background: #f9f9f9; }
-    </style>
+    body{background:var(--bg);background-image:linear-gradient(180deg,var(--primary-soft),var(--bg) 280px);color:var(--text);font-family:var(--font-body)}.container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg)}h1{font-family:var(--font-display);color:var(--text)}a{color:var(--primary)!important}.summary-box{background:var(--primary-soft);border:1px solid var(--border);border-radius:var(--radius)}.summary-value{color:var(--primary)}th{background:var(--surface-alt);color:var(--text-muted);position:sticky;top:0;z-index:1}th,td{border-bottom-color:var(--border)}tr:nth-child(even){background:var(--surface-alt)}</style>
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
     <div class="container">
         <h1>Batch Processor Final Output (Temp Storage)</h1>
         <p style="text-align: center; margin-bottom: 20px;">
-            <a href="/" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">← Back to Dashboard</a> | 
-            <a href="/database" style="color: #4a0b3f; text-decoration: none; font-weight: bold;">View NoSQL DB</a>
+            <a href="/" style="color: var(--primary); text-decoration: none; font-weight: bold;">← Back to Dashboard</a> | 
+            <a href="/database" style="color: var(--primary); text-decoration: none; font-weight: bold;">View NoSQL DB</a>
         </p>
 
         <div class="summary-box">

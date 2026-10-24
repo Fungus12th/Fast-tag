@@ -5,8 +5,8 @@
     <title>FASTag Database Stream</title>
     <style>
         body {
-            background-color: #e0f2e9;
-            background-image: radial-gradient(#9acbb3 2px, transparent 2px);
+            background-color: var(--bg);
+            background-image: radial-gradient(var(--primary-soft) 2px, transparent 2px);
             background-size: 30px 30px;
             font-family: monospace;
             color: #111;
@@ -30,10 +30,11 @@
             padding: 10px;
             border-bottom: 1px solid #ccc;
         }
-        th { background: #9acbb3; }
+        th { background: var(--primary-soft); }
         tr:nth-child(even) { background: #f9f9f9; }
         .ping-id { font-size: 0.8em; color: #555; }
-    </style>
+    body{background:var(--bg);background-image:linear-gradient(180deg,var(--primary-soft),var(--bg) 280px);color:var(--text);font-family:var(--font-body)}.container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg)}h1{font-family:var(--font-display);color:var(--text)}a{color:var(--primary);font-weight:600}th{background:var(--surface-alt);color:var(--text-muted);position:sticky;top:0;z-index:1}th,td{border-bottom-color:var(--border)}tr:nth-child(even){background:var(--surface-alt)}</style>
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
     <div class="container">

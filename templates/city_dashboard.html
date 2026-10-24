@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ city.city_name }} Local Station Node</title>
+  <link rel="stylesheet" href="/static/css/theme.css">
+  <style>
+    .page{max-width:1440px;margin:auto;padding:20px}.brand{font-family:var(--font-display);font-weight:700;font-size:1.05rem}.city-title{margin:8px 0 20px}.city-title h1{font-family:var(--font-display);font-size:2rem}.muted{color:var(--text-muted)}.badge{padding:5px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:.75rem;font-weight:700}.online{color:var(--success);font-weight:700}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.metric strong{display:block;font:700 2rem var(--font-display);margin-top:8px}.section{margin-top:20px}.section h2{font:700 1.1rem var(--font-display);margin-bottom:10px}.tag-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.75rem;font-weight:700}.badge-success{background:var(--success-bg);color:#15803d}.badge-failed{background:var(--danger-bg);color:#b91c1c}.status-badge{display:inline-flex;padding:8px 14px;border-radius:var(--radius-pill);font-size:.85rem;font-weight:600;margin-bottom:14px}.status-success{background:var(--success-bg);color:#166534}.status-error{background:var(--danger-bg);color:#b91c1c}.empty{text-align:center;color:var(--text-muted)}.query-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.query-chip{padding:7px 10px;border:1px solid var(--primary);border-radius:999px;background:transparent;color:var(--primary);cursor:pointer;font-size:.78rem}.query-chip:hover{background:var(--primary);color:#fff}.node-editor{width:100%;min-height:120px;resize:vertical;background:var(--editor-bg);color:var(--editor-text);border:1px solid var(--editor-border);border-radius:var(--radius-sm);padding:14px;font:14px var(--font-mono);margin-bottom:12px}.query-result{margin-top:16px}.query-result .saas-table-container{max-height:360px;overflow:auto}.cache-note{margin-bottom:14px}@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.metrics{grid-template-columns:1fr}.page{padding:12px}.saas-nav{align-items:flex-start}}
+  </style>
+</head>
+<body><main class="page">
+  <nav class="saas-nav">
+    <span class="brand">🚗 FASTag Local Station Node</span>
+    <div class="saas-nav-links"><span class="badge">REGION: {{ city.city_key }}</span><span class="online">● Local DB Online</span><a class="saas-nav-link" href="/ddbms">🌐 DDBMS Architecture</a><a class="saas-btn saas-btn-danger" href="/logout">Sign Out</a></div>
+  </nav>
+  <header class="city-title"><h1>{{ city.city_name }} Local Database</h1><p class="muted">city_key: {{ city.city_key }} · Highway: {{ city.highway }}</p></header>
+  <section class="metrics">
+    <div class="saas-card metric"><div class="saas-card-title">Total Ingested Pings</div><strong id="stat-pings">0</strong></div>
+    <div class="saas-card metric"><div class="saas-card-title">Clean Journeys</div><strong id="stat-journeys">{{ city.stats.total_journeys }}</strong></div>
+    <div class="saas-card metric"><div class="saas-card-title">Local Toll Revenue</div><strong id="stat-revenue">₹{{ '%.2f'|format(city.stats.total_revenue) }}</strong></div>
+    <div class="saas-card metric"><div class="saas-card-title">Successful vs Failed</div><strong id="stat-success-fail">{{ city.stats.successful_journeys }} / {{ city.stats.failed_journeys }}</strong></div>
+  </section>
+  <section class="saas-card section">
+    <h2>⚡ Local Node SQL Query Terminal</h2>
+    <p class="muted" style="font-family:var(--font-mono);font-size:.82rem;margin-bottom:14px">NODE_{{ city.city_key }}_EDGE_01 · Physical Fragment: data/nodes/{{ city.city_key.lower() }}_node.db · σ(region='{{ city.city_key }}')</p>
+    <div class="query-chips">
+      <button class="query-chip" onclick="setNodeQuery('SELECT * FROM Journeys_Local ORDER BY journey_id DESC LIMIT 15;')">SELECT * FROM Journeys_Local ORDER BY journey_id DESC LIMIT 15;</button>
+      <button class="query-chip" onclick="setNodeQuery('SELECT * FROM Toll_Plazas_Local;')">SELECT * FROM Toll_Plazas_Local;</button>
+      <button class="query-chip" onclick="setNodeQuery('SELECT * FROM Edge_Tags_Cache LIMIT 15;')">SELECT * FROM Edge_Tags_Cache LIMIT 15;</button>
+      <button class="query-chip" onclick="setNodeQuery('SELECT payment_status, COUNT(*) AS count, SUM(deducted_amount) AS revenue FROM Journeys_Local GROUP BY payment_status;')">SELECT payment_status, COUNT(*) AS count, SUM(deducted_amount) AS revenue FROM Journeys_Local GROUP BY payment_status;</button>
+    </div>
+    <textarea id="node-sql" class="node-editor" spellcheck="false">SELECT * FROM Journeys_Local ORDER BY journey_id DESC LIMIT 15;</textarea>
+    <button class="saas-btn saas-btn-primary" id="node-run" onclick="runNodeQuery()">Execute Node Query ⚡</button>
+    <div id="node-result" class="query-result"></div>
+  </section>
+  <section class="saas-card section">
+    <h2>Vertical Edge Fragment: Edge_Tags_Cache</h2>
+    <p class="saas-callout cache-note">This local RFID cache provides instant authorization at this edge station without exposing central financial PII.</p>
+    <div class="saas-table-container"><table class="saas-table"><thead id="cache-head"></thead><tbody id="cache-body"><tr><td class="empty">Loading local RFID cache…</td></tr></tbody></table></div>
+  </section>
+  <section class="saas-card section"><h2>Local Toll Plazas</h2><div class="saas-table-container"><table class="saas-table"><thead><tr><th>ID</th><th>Plaza Name</th><th>Highway</th><th class="money">Base Rate</th><th>Status</th></tr></thead><tbody>{% for p in city.plazas %}<tr><td>{{ p.plaza_id }}</td><td>{{ p.plaza_name }}</td><td>{{ p.highway_name }}</td><td class="money">₹{{ '%.2f'|format(p.base_toll_rate) }}</td><td><span class="tag-badge badge-success">ONLINE</span></td></tr>{% else %}<tr><td colspan="5" class="empty">No local plazas found</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="saas-card section"><h2>Local Deduplicated Financial Journeys</h2><div class="saas-table-container"><table class="saas-table"><thead><tr><th>Journey ID</th><th>Timestamp</th><th>Tag ID</th><th>Vehicle (Registration &amp; Class)</th><th>Plaza</th><th class="money">Deducted Amount</th><th>Status</th></tr></thead><tbody id="city-journeys-body"></tbody></table></div></section>
+  <section class="saas-card section"><h2>Local Raw Edge Pings</h2><div class="saas-table-container"><table class="saas-table"><thead><tr><th>Ping ID</th><th>Timestamp</th><th>Plaza</th><th>Tag ID</th><th>RSSI dBm</th><th>Lane</th></tr></thead><tbody id="city-raw-body"></tbody></table></div></section>
+</main>
+<script>
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rows=(id,html,span)=>document.getElementById(id).innerHTML=html||`<tr><td colspan="${span}" class="empty">No records yet</td></tr>`;
+const nodeQueries=[
+ 'SELECT * FROM Journeys_Local ORDER BY journey_id DESC LIMIT 15;',
+ 'SELECT * FROM Toll_Plazas_Local;',
+ 'SELECT * FROM Edge_Tags_Cache LIMIT 15;',
+ 'SELECT payment_status, COUNT(*) AS count, SUM(deducted_amount) AS revenue FROM Journeys_Local GROUP BY payment_status;'
+];
+function setNodeQuery(sql){document.getElementById('node-sql').value=sql;runNodeQuery()}
+async function runNodeQuery(){
+ const query=document.getElementById('node-sql').value.trim(), button=document.getElementById('node-run'), result=document.getElementById('node-result'); if(!query)return;
+ button.disabled=true;button.textContent='Executing…';
+ try{const response=await fetch('/api/city/{{ city.city_key.lower() }}/sql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:query})});const data=await response.json();
+  if(!data.success)throw new Error(data.error||'Query failed');
+  const columns=data.columns||[], values=data.rows||[]; result.innerHTML=`<div class="status-badge status-success">✓ Executed on Local Node in ${esc(data.execution_time_ms??data.latency_ms??0)} ms · ${values.length} rows returned</div><div class="saas-table-container"><table class="saas-table"><thead><tr>${columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${values.length?values.map(row=>`<tr>${row.map(v=>`<td>${v===null?'<em>NULL</em>':esc(v)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${columns.length||1}" class="empty">No rows returned</td></tr>`}</tbody></table></div>`;
+ }catch(error){result.innerHTML=`<div class="status-badge status-error">❌ ${esc(error.message)}</div>`}finally{button.disabled=false;button.textContent='Execute Node Query ⚡'}
+}
+document.getElementById('node-sql').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runNodeQuery()}});
+async function loadTagCache(){try{const r=await fetch('/api/city/{{ city.city_key.lower() }}/sql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'SELECT * FROM Edge_Tags_Cache LIMIT 15;'})});const d=await r.json();if(!d.success)throw Error(d.error);document.getElementById('cache-head').innerHTML=`<tr>${(d.columns||[]).map(c=>`<th>${esc(c)}</th>`).join('')}</tr>`;document.getElementById('cache-body').innerHTML=(d.rows||[]).map(row=>`<tr>${row.map(v=>`<td>${v===null?'<em>NULL</em>':esc(v)}</td>`).join('')}</tr>`).join('')||'<tr><td class="empty">No cached tags found</td></tr>'}catch(e){document.getElementById('cache-body').innerHTML=`<tr><td class="empty">${esc(e.message)}</td></tr>`}}
+function render(d){
+ if(!d)return;
+ const stats=d.stats||{};
+ const journeys=Array.isArray(d.recent_journeys)?d.recent_journeys:[];
+ const pings=Array.isArray(d.recent_raw_pings)?d.recent_raw_pings:[];
+ document.getElementById('stat-pings').textContent=pings.length.toLocaleString();
+ document.getElementById('stat-journeys').textContent=(stats.total_journeys||0).toLocaleString();
+ document.getElementById('stat-revenue').textContent='₹'+Number(stats.total_revenue||0).toFixed(2);
+ document.getElementById('stat-success-fail').textContent=(stats.successful_journeys||0)+' / '+(stats.failed_journeys||0);
+ rows('city-journeys-body',journeys.map(j=>`<tr><td>${esc(j.journey_id)}</td><td>${esc(j.timestamp)}</td><td>${esc(j.tag_id)}</td><td>${esc(j.registration_no)} &amp; ${esc(j.vehicle_class)}</td><td>${esc(j.plaza_name)}</td><td class="money">₹${Number(j.deducted_amount||0).toFixed(2)}</td><td><span class="tag-badge ${j.payment_status==='SUCCESS'?'badge-success':'badge-failed'}">${esc(j.payment_status)}</span></td></tr>`).join(''),7);
+ rows('city-raw-body',pings.map(p=>`<tr><td>${esc(p.ping_id||p.id)}</td><td>${esc(p.ping_timestamp||p.timestamp)}</td><td>${esc(p.plaza_id||p.plaza_name)}</td><td>${esc(p.tag_id)}</td><td>${esc(p.rssi_signal_strength||p.rssi_dbm||p.rssi||'—')} dBm</td><td>${esc(p.lane_id||p.lane||'—')}</td></tr>`).join(''),6);
+}
+async function poll(){try{const r=await fetch('/api/city/{{ city.city_key.lower() }}/data');if(r.ok)render(await r.json())}catch(e){}};render({stats:{{ city.stats|tojson }},recent_journeys:{{ city.recent_journeys|tojson }},recent_raw_pings:{{ city.recent_raw_pings|tojson }}});poll();loadTagCache();setInterval(poll,2500);
+</script></body></html>

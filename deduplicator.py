@@ -181,6 +181,14 @@ class BatchDeduplicator:
             except Exception as e:
                 print(f"[DEDUP] Error saving temp output: {e}")
 
+            # Commit clean journeys to SQL Financial Ledger (Layer 3: ACID transactions)
+            try:
+                import sql_ledger
+                for j in journeys:
+                    sql_ledger.process_toll_batch(j["tag_id"], j["plaza_id"], j.get("ping_timestamp"))
+            except Exception as e:
+                print(f"[DEDUP -> SQL] Error committing to SQL ledger: {e}")
+
 
             return {
                 "raw_count":     raw_count,

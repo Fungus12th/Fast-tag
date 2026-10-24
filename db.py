@@ -1,8 +1,3 @@
-"""
-FASTag DA-2 — Database / Storage Layer
-Provides a unified StorageBackend that transparently uses Cassandra or in-memory storage.
-"""
-
 import time
 import threading
 import uuid

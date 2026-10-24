@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASTag Live Ingestion Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    
+    <style>
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 8px rgba(220,38,38,.55); } 50% { box-shadow: 0 0 22px rgba(220,38,38,.95); } }
+        /* DASHBOARD LAYOUT */
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* HEADER */
+        .header {
+            text-align: center;
+            padding: 0.5rem 0 1rem;
+            position: relative;
+        }
+        .header h1 {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 2.25rem;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+        .header .subtitle {
+            font-family: var(--font-body);
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-top: 0.35rem;
+        }
+        
+        /* CARD BASE */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        .card:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow-md);
+        }
+        .card-title {
+            color: var(--text-muted);
+            font-family: var(--font-display);
+            font-size: 0.825rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+        }
+
+        /* HERO COUNTERS */
+        .hero-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+        }
+        .hero-card {
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--primary-soft);
+        }
+        .hero-card:hover::after {
+            background: var(--primary);
+        }
+        .hero-value {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            font-size: 2.4rem;
+            line-height: 1.1;
+            margin-top: 0.25rem;
+            color: var(--text);
+        }
+        .hero-value.primary {
+            color: var(--primary);
+        }
+        .hero-value.highlight {
+            color: var(--primary);
+        }
+        .hero-sub {
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--text-faint);
+            margin-top: 0.5rem;
+        }
+
+        /* CHARTS ROW */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 260px;
+        }
+        .gauge-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .gauge-chart-box {
+            position: relative;
+            width: 100%;
+            max-width: 220px;
+            height: 200px;
+            margin: 0 auto;
+        }
+        .gauge-center-text {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .gauge-center-text .ratio-value {
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            font-size: 2rem;
+            color: var(--text);
+        }
+        .gauge-center-text .ratio-label {
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .gauge-sublabel {
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        /* MAP + PLAZA TABLE ROW */
+        .map-row {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 1.5rem;
+        }
+        #map {
+            height: 340px;
+            width: 100%;
+            border-radius: var(--radius-sm);
+            background: var(--surface-alt);
+            border: 1px solid var(--border);
+        }
+
+        /* Plaza table */
+        .plaza-table-wrap {
+            overflow-y: auto;
+            max-height: 340px;
+        }
+        .plaza-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .plaza-table th {
+            font-family: var(--font-body);
+            font-weight: 600;
+            text-align: left;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.75rem;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+            background: var(--surface-alt);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .plaza-table th:hover { color: var(--primary); }
+        .plaza-table td {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.825rem;
+        }
+        .plaza-table td:first-child, .plaza-table td:last-child {
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .plaza-table tr:hover td {
+            background: var(--primary-soft);
+        }
+        .plaza-table tr.busiest td {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .plaza-table .region-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: var(--primary-soft);
+            color: var(--primary);
+            border: 1px solid rgba(2, 132, 199, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-faint);
+            padding: 2rem;
+            font-size: 0.95rem;
+            font-family: var(--font-body);
+            font-weight: 500;
+        }
+
+        /* CONTROLS BAR */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2.5rem;
+            flex-wrap: wrap;
+            padding: 1.25rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+        }
+        #chaos-btn {
+            font-family: var(--font-body);
+            font-weight: 600;
+            padding: 0.75rem 1.75rem;
+            font-size: 0.95rem;
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+        }
+        #chaos-btn:hover {
+            background: #fecaca;
+            color: #b91c1c;
+        }
+        #chaos-btn.active {
+            background: var(--danger);
+            color: #ffffff;
+            border-color: var(--danger);
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.4);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .slider-group label {
+            font-family: var(--font-body);
+            font-size: 0.775rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .slider-group .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .slider-group input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-strong);
+            outline: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: transform 0.15s;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: none;
+        }
+        .slider-group .slider-val {
+            font-family: var(--font-mono);
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 2.5rem;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #trigger-dedup-btn {
+            font-family: var(--font-body);
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.925rem;
+            background: var(--primary);
+            color: #ffffff;
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+        }
+        #trigger-dedup-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        #trigger-dedup-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* STATUS FOOTER */
+        .status-bar {
+            font-family: var(--font-body);
+            font-weight: 500;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 2rem;
+            padding: 0.9rem 1.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            box-shadow: var(--shadow-sm);
+        }
+        .status-bar .status-item span {
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-weight: 600;
+        }
+        .status-bar .status-item .chaos-on { color: var(--danger); }
+
+        /* RESPONSIVE */
+        @media (max-width: 1000px) {
+            .hero-row { grid-template-columns: repeat(2, 1fr); }
+            .charts-row { grid-template-columns: 1fr; }
+            .map-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .dashboard { padding: 1rem; }
+            .hero-row { grid-template-columns: 1fr; }
+            .hero-value { font-size: 2rem; }
+            .header h1 { font-size: 1.6rem; }
+            .controls-row { gap: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="dashboard">
+
+        <!-- HEADER & NAV -->
+        <header class="header">
+            <nav class="saas-nav">
+                <div class="saas-nav-links">
+                    <a href="/dashboard" class="saas-nav-link active">Live Dashboard</a>
+                    <a href="/sql_ledger" class="saas-nav-link">3NF SQL Ledger</a>
+                    <a href="/sql_console" class="saas-nav-link">SQL Console</a>
+                    <a href="/ddbms" class="saas-nav-link">🌐 DDBMS Architecture</a>
+                    <a href="/database" class="saas-nav-link">Global NoSQL Stream</a>
+                    <a href="/batch_output" class="saas-nav-link">Batch Output</a>
+                    <a href="/summary" class="saas-nav-link">Station Summary</a>
+                    <a href="/logout" class="saas-nav-link">Sign Out</a>
+                </div>
+                <div class="saas-nav-clock" id="live-clock">--:--:--</div>
+            </nav>
+            <h1>FASTag Live Ingestion Dashboard</h1>
+            <p class="subtitle">High-Frequency IoT Ingestion, Deduplication &amp; 3NF ACID Ledger</p>
+        </header>
+
+        <!-- HERO COUNTERS -->
+        <section class="hero-row">
+            <div class="card hero-card">
+                <div class="card-title">Total Raw Pings Ingested</div>
+                <div class="hero-value primary" id="hero-total-pings">0</div>
+                <div class="hero-sub" id="hero-pings-sub">&nbsp;</div>
+            </div>
+            <div class="card hero-card">
+                <div class="card-title">Clean Deduplicated Journeys</div>
+                <div class="hero-value primary" id="hero-total-journeys">0</div>
+                <div class="hero-sub" id="hero-journeys-sub">&nbsp;</div>
+            </div>
+            <div class="card hero-card">
+                <div class="card-title">Deduplication Ratio</div>
+                <div class="hero-value highlight" id="hero-dedup-ratio">0%</div>
+                <div class="hero-sub" id="hero-ratio-sub">noise filtered</div>
+            </div>
+            <div class="card hero-card">
+                <div class="card-title">Pings Per Second</div>
+                <div class="hero-value primary" id="hero-pps">0</div>
+                <div class="hero-sub">throughput</div>
+            </div>
+        </section>
+
+        <!-- CHARTS ROW -->
+        <section class="charts-row">
+            <div class="card">
+                <div class="card-title">Live Throughput - Pings Per Second (30s window)</div>
+                <div class="chart-container">
+                    <canvas id="throughput-canvas"></canvas>
+                </div>
+            </div>
+            <div class="card gauge-wrapper">
+                <div class="card-title">Deduplication Gauge</div>
+                <div class="gauge-chart-box">
+                    <canvas id="gauge-canvas"></canvas>
+                    <div class="gauge-center-text">
+                        <div class="ratio-value" id="gauge-ratio">—</div>
+                        <div class="ratio-label">noise reduction</div>
+                    </div>
+                </div>
+                <div class="gauge-sublabel" id="gauge-sublabel">Awaiting first dedup run...</div>
+            </div>
+        </section>
+
+        <!-- MAP + PLAZA TABLE ROW -->
+        <section class="map-row">
+            <div class="card" style="padding: 1rem;">
+                <div class="card-title" style="margin-left: 0.5rem;">Live India Toll Plaza Map</div>
+                <div id="map"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Per-Plaza Breakdown</div>
+                <div class="plaza-table-wrap">
+                    <table class="plaza-table">
+                        <thead>
+                            <tr>
+                                <th onclick="sortPlazaTable('plaza_id')">Plaza</th>
+                                <th onclick="sortPlazaTable('total_pings')">Pings</th>
+                                <th onclick="sortPlazaTable('unique_tags')">Unique Tags</th>
+                                <th onclick="sortPlazaTable('duplicates')">Duplicates</th>
+                                <th onclick="sortPlazaTable('region')">Region</th>
+                            </tr>
+                        </thead>
+                        <tbody id="plaza-table-body">
+                            <tr><td colspan="5" class="empty-state">No data yet - start a generator</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTROLS BAR -->
+        <section class="controls-row">
+
+
+            <div class="slider-group">
+                <label>Dedup Interval</label>
+                <div class="slider-row">
+                    <input type="range" id="dedup-slider" min="10" max="60" step="5" value="30"
+                           oninput="onSliderInput(this.value)" onchange="onSliderChange(this.value)">
+                    <span class="slider-val" id="slider-val">30s</span>
+                </div>
+            </div>
+
+            <button id="trigger-dedup-btn" onclick="triggerDedup()">Trigger Dedup Now</button>
+        </section>
+
+        
+
+        <!-- STATUS FOOTER -->
+        <footer class="status-bar">
+            <div class="status-item">Backend: <span id="status-backend">—</span></div>
+            <div class="status-item">Last Dedup: <span id="status-last-dedup">never</span></div>
+
+            <div class="status-item">Dedup Worker: <span id="status-worker">—</span></div>
+            <div class="status-item">Server: <span id="status-health">—</span></div>
+        </footer>
+
+    </div>
+
+    <!-- Chart.js & Leaflet JS from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+
+    <script>
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CONFIGURATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const POLL_STATS_MS       = 500;
+    const POLL_THROUGHPUT_MS  = 1000;
+    const POLL_PLAZA_MS       = 2000;
+    const POLL_EVENTS_MS      = 2000;
+    const POLL_HEALTH_MS      = 5000;
+
+    // Actual Toll Plaza coordinates in India
+    
+    const KNOWN_PLAZAS = {
+        'Place1Delhi':     { region: 'DELHI', name: 'Delhi Border (NH-44)' },
+        'Place2Delhi':     { region: 'DELHI', name: 'Delhi-Meerut Expy' },
+        'Place3Delhi':     { region: 'DELHI', name: 'Delhi NH-48 Plaza' },
+        'Place1Kolkata':   { region: 'KOLKATA', name: 'Kolkata NH-16' },
+        'Place2Kolkata':   { region: 'KOLKATA', name: 'Kolkata NH-19' },
+        'Place3Kolkata':   { region: 'KOLKATA', name: 'Durgapur Expy' },
+        'Place1Mumbai':    { region: 'MUMBAI', name: 'Mumbai-Pune Expy' },
+        'Place2Mumbai':    { region: 'MUMBAI', name: 'Eastern Freeway (Mumbai)' },
+        'Place3Mumbai':    { region: 'MUMBAI', name: 'Bandra-Worli (Mumbai)' },
+        'Place1Bengaluru': { region: 'BENGALURU', name: 'NICE Road (Bengaluru)' },
+        'Place2Bengaluru': { region: 'BENGALURU', name: 'NH-44 South (Bengaluru)' },
+        'Place3Bengaluru': { region: 'BENGALURU', name: 'Bengaluru-Mysuru Expy' },
+        'Place1Chennai':   { region: 'CHENNAI', name: 'Grand Southern Trunk (Chennai)' },
+        'Place2Chennai':   { region: 'CHENNAI', name: 'OMR IT Corridor (Chennai)' },
+        'Place3Chennai':   { region: 'CHENNAI', name: 'NH-16 East (Chennai)' },
+        'Place1Hyderabad': { region: 'HYDERABAD', name: 'ORR Hyderabad' },
+        'Place2Hyderabad': { region: 'HYDERABAD', name: 'NH-65 Hyderabad' },
+        'Place3Hyderabad': { region: 'HYDERABAD', name: 'Hyderabad-Vijayawada' },
+        'Place1Ahmedabad': { region: 'AHMEDABAD', name: 'NH-48 West (Ahmedabad)' },
+        'Place2Ahmedabad': { region: 'AHMEDABAD', name: 'Ahmedabad-Vadodara Expy' },
+        'Place3Ahmedabad': { region: 'AHMEDABAD', name: 'SG Highway (Ahmedabad)' },
+        'Place1Surat':     { region: 'SURAT', name: 'NH-48 Surat' },
+        'Place2Surat':     { region: 'SURAT', name: 'Diamond Bridge (Surat)' },
+        'Place3Surat':     { region: 'SURAT', name: 'Surat-Hazira Road' },
+        'Place1Pune':      { region: 'PUNE', name: 'NH-48 Pune' },
+        'Place2Pune':      { region: 'PUNE', name: 'Pune-Satara NH' },
+        'Place3Pune':      { region: 'PUNE', name: 'Pune-Bengaluru Expy' },
+        'Place1Jaipur':    { region: 'JAIPUR', name: 'Delhi-Jaipur Expy' },
+        'Place2Jaipur':    { region: 'JAIPUR', name: 'NH-48 Jaipur' },
+        'Place3Jaipur':    { region: 'JAIPUR', name: 'Jaipur Ring Road' }
+    };
+
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const counters = {
+        totalPings:   { current: 0, target: 0, el: null },
+        totalJourneys:{ current: 0, target: 0, el: null },
+        dedupRatio:   { current: 0, target: 0, el: null },
+        pps:          { current: 0, target: 0, el: null },
+    };
+    let lastDedupRunAt = null;
+    let plazaSortKey   = 'total_pings';
+    let plazaSortAsc   = false;
+    let currentPlazaData = {};
+
+    let throughputChart = null;
+    let dedupGaugeChart = null;
+    let map = null;
+    let mapMarkers = {};
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ UTILITIES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function formatTime(iso) {
+        if (!iso) return '—';
+        try {
+            const d = new Date(iso);
+            return d.toLocaleTimeString('en-US', { hour12: false });
+        } catch { return iso; }
+    }
+    function formatPlazaName(id) {
+        if (KNOWN_PLAZAS[id]) return KNOWN_PLAZAS[id].name;
+        return String(id).replace(/^PLAZA_/i, '').replace(/_/g, ' ');
+    }
+    function debounce(fn, ms) {
+        let timer;
+        return function() {
+            const args = arguments;
+            clearTimeout(timer);
+            timer = setTimeout(function() { fn.apply(null, args); }, ms);
+        };
+    }
+
+    
+    // --- CUSTOM CSS MAP INITIALIZATION ---
+    let mapDiv = null;
+    const tooltip = document.createElement('div');
+    tooltip.style.position = 'absolute';
+    tooltip.style.display = 'none';
+    tooltip.style.backgroundColor = '#ffffff';
+    tooltip.style.border = '1px solid #cbd5e1';
+    tooltip.style.padding = '8px 12px';
+    tooltip.style.borderRadius = '8px';
+    tooltip.style.color = '#0f172a';
+    tooltip.style.fontWeight = '600';
+    tooltip.style.fontSize = '0.85rem';
+    tooltip.style.zIndex = '9999';
+    tooltip.style.boxShadow = '0 4px 12px rgba(2, 132, 199, 0.12)';
+    tooltip.style.pointerEvents = 'none';
+
+    function setupMapContainer() {
+        const mapContainer = document.getElementById('map');
+        if (mapContainer && !mapDiv) {
+            mapContainer.style.display = 'flex';
+            mapContainer.style.justifyContent = 'center';
+            mapContainer.style.alignItems = 'center';
+            mapContainer.style.overflow = 'hidden';
+            
+            mapDiv = document.createElement('div');
+            mapDiv.style.position = 'relative';
+            mapDiv.style.height = '100%';
+            mapDiv.style.aspectRatio = '1 / 1';
+            mapDiv.style.backgroundImage = "url('/static/india_map_transparent.png')";
+            mapDiv.style.backgroundSize = 'contain';
+            mapDiv.style.backgroundRepeat = 'no-repeat';
+            mapDiv.style.backgroundPosition = 'center';
+            
+            mapContainer.appendChild(mapDiv);
+            mapDiv.appendChild(tooltip);
+
+            mapDiv.onclick = function() {
+                tooltip.style.display = 'none';
+            };
+        }
+    }
+
+    const markersData = {};
+    const markers = {};
+    
+    function createMarker(id, top, left, label) {
+        if (!mapDiv) return;
+        const m = document.createElement('div');
+        m.style.position = 'absolute';
+        m.style.top = top;
+        m.style.left = left;
+        m.style.width = '14px';
+        m.style.height = '14px';
+        m.style.backgroundColor = '#0284c7';
+        m.style.borderRadius = '50%';
+        m.style.transform = 'translate(-50%, -50%)';
+        m.style.transition = 'all 0.3s ease';
+        m.style.boxShadow = '0 0 10px rgba(2, 132, 199, 0.5)';
+        
+        const text = document.createElement('div');
+        text.textContent = label;
+        text.style.position = 'absolute';
+        text.style.top = '18px';
+        text.style.left = '50%';
+        text.style.transform = 'translateX(-50%)';
+        text.style.color = '#0f172a';
+        text.style.fontWeight = '700';
+        text.style.fontSize = '0.725rem';
+        text.style.textShadow = '0 0 3px #ffffff';
+        m.appendChild(text);
+        
+        mapDiv.appendChild(m);
+        
+        m.style.cursor = 'pointer';
+        
+        m.onclick = function(e) {
+            const data = markersData[id];
+            if (data) {
+                tooltip.innerHTML = `
+                    <div style="font-size: 0.95rem; border-bottom: 1px solid #e2e8f0; margin-bottom: 5px; padding-bottom: 4px; color: #0284c7;">${label}</div>
+                    Total Pings: ${data.total_pings.toLocaleString()}<br>
+                    Unique Tags: ${data.unique_tags.toLocaleString()}<br>
+                    Duplicates: ${data.duplicates.toLocaleString()}
+                `;
+                tooltip.style.display = 'block';
+                
+                // Position tooltip near the marker
+                const rect = m.getBoundingClientRect();
+                const mapRect = mapDiv.getBoundingClientRect();
+                tooltip.style.left = (rect.left - mapRect.left + 25) + 'px';
+                tooltip.style.top = (rect.top - mapRect.top - 20) + 'px';
+                
+                // Hide after 3 seconds
+                setTimeout(() => { tooltip.style.display = 'none'; }, 3000);
+            } else {
+                tooltip.innerHTML = `<div style="color: #0284c7; font-weight: 700;">${label}</div>No data yet`;
+                tooltip.style.display = 'block';
+                const rect = m.getBoundingClientRect();
+                const mapRect = mapDiv.getBoundingClientRect();
+                tooltip.style.left = (rect.left - mapRect.left + 25) + 'px';
+                tooltip.style.top = (rect.top - mapRect.top - 20) + 'px';
+                setTimeout(() => { tooltip.style.display = 'none'; }, 3000);
+            }
+            e.stopPropagation();
+        };
+        
+        markers[id] = m;
+    }
+    
+    function initMap() {
+        setupMapContainer();
+        createMarker('DELHI', '31.7%', '41.1%', 'DELHI');
+        createMarker('JAIPUR', '36.5%', '36.5%', 'JAIPUR');
+        createMarker('AHMEDABAD', '49.0%', '27.0%', 'AHMEDABAD');
+        createMarker('SURAT', '55.5%', '28.0%', 'SURAT');
+        createMarker('MUMBAI', '62.5%', '24.1%', 'MUMBAI');
+        createMarker('PUNE', '65.5%', '30.0%', 'PUNE');
+        createMarker('HYDERABAD', '62.0%', '46.0%', 'HYDERABAD');
+        createMarker('BENGALURU', '78.5%', '41.5%', 'BENGALURU');
+        createMarker('CHENNAI', '76.6%', '47.0%', 'CHENNAI');
+        createMarker('KOLKATA', '47.5%', '74.0%', 'KOLKATA');
+    }
+    
+    function updateMapMarkers(plazasData) {
+        Object.values(markers).forEach(m => {
+            m.style.width = '14px';
+            m.style.height = '14px';
+            m.style.backgroundColor = '#0284c7';
+        });
+        
+        const cityTotals = {};
+        for (const id in plazasData) {
+            const data = plazasData[id] || {};
+            const knownCities = ['DELHI','JAIPUR','AHMEDABAD','SURAT','MUMBAI','PUNE','HYDERABAD','BENGALURU','CHENNAI','KOLKATA'];
+            const fromPlaza = knownCities.find(city => String(id).toUpperCase().endsWith(city));
+            const region = String(data.region || data.city || '').toUpperCase();
+            const city = knownCities.includes(region) ? region : (fromPlaza || region);
+            if (!city) continue;
+            const total = cityTotals[city] || {total_pings: 0, unique_tags: 0, duplicates: 0};
+            total.total_pings += Number(data.total_pings || 0);
+            total.unique_tags += Number(data.unique_tags || 0);
+            total.duplicates += Number(data.duplicates || 0);
+            cityTotals[city] = total;
+        }
+        Object.keys(markers).forEach(city => {
+            const data = cityTotals[city] || {total_pings: 0, unique_tags: 0, duplicates: 0};
+            markersData[city] = data;
+            if (data.total_pings > 0) {
+                const scale = Math.min(2.8, 1 + (data.total_pings / 5000));
+                markers[city].style.width = (14 * scale) + 'px';
+                markers[city].style.height = (14 * scale) + 'px';
+                markers[city].style.backgroundColor = '#dc2626';
+                markers[city].style.animation = 'pulse 1.5s infinite';
+            } else {
+                markers[city].style.animation = 'none';
+            }
+        });
+    }
+
+    // ─── COUNTER ANIMATION ───
+    function tickCounters() {
+        for (const key of Object.keys(counters)) {
+            const c = counters[key];
+            if (!c.el) continue;
+            const diff = c.target - c.current;
+            if (Math.abs(diff) < 0.5) {
+                c.current = c.target;
+            } else {
+                c.current += diff * 0.15;
+            }
+            if (key === 'dedupRatio') {
+                c.el.textContent = c.current.toFixed(1) + '%';
+            } else {
+                c.el.textContent = Math.round(c.current).toLocaleString();
+            }
+        }
+        requestAnimationFrame(tickCounters);
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ CHART INITIALIZATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function initCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        Chart.defaults.color = '#475569';
+        Chart.defaults.borderColor = '#e2e8f0';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.font.weight = 500;
+
+        const tCtx = document.getElementById('throughput-canvas').getContext('2d');
+        throughputChart = new Chart(tCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Pings/sec',
+                    data: [],
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 0,
+                    pointHitRadius: 10,
+                    borderWidth: 2.5,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 200 },
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: {
+                        ticks: { maxTicksLimit: 6, color: '#64748b' },
+                        grid: { color: '#f1f5f9' },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#64748b' },
+                        grid: { color: '#f1f5f9' },
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#38bdf8',
+                        borderColor: '#1e293b',
+                        borderWidth: 1,
+                        padding: 10,
+                        titleFont: { family: "'Inter', sans-serif", weight: 600 },
+                        bodyFont: { family: "'JetBrains Mono', monospace", weight: 500 }
+                    }
+                }
+            }
+        });
+
+        const gCtx = document.getElementById('gauge-canvas').getContext('2d');
+        dedupGaugeChart = new Chart(gCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Duplicates Filtered', 'Clean Journeys'],
+                datasets: [{
+                    data: [0, 1],
+                    backgroundColor: ['#cbd5e1', '#0284c7'],
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    hoverOffset: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                animation: { duration: 400 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#38bdf8',
+                        borderColor: '#1e293b',
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.label + ': ' + ctx.parsed.toFixed(1) + '%';
+                            }
+                        },
+                        titleFont: { family: "'Inter', sans-serif", weight: 600 },
+                        bodyFont: { family: "'Inter', sans-serif", weight: 500 }
+                    }
+                }
+            }
+        });
+    }
+
+    // ──────────────── POLLING ────────────────
+    async function pollStats() {
+        try {
+            const res = await fetch('/api/stats');
+            if (!res.ok) return;
+            const d = await res.json();
+
+            counters.totalPings.target   = d.total_raw_pings || 0;
+            counters.totalJourneys.target = d.total_deduplicated_journeys || 0;
+            counters.dedupRatio.target    = d.dedup_ratio || 0;
+            counters.pps.target           = d.pings_per_second || 0;
+
+            if (d.last_raw_count > 0 && d.last_journey_count >= 0) {
+                document.getElementById('hero-pings-sub').textContent = 'last window: ' + d.last_raw_count.toLocaleString();
+                document.getElementById('hero-journeys-sub').textContent = 'last run: ' + d.last_journey_count.toLocaleString();
+            }
+
+            if (dedupGaugeChart) {
+                if (!d.last_dedup_run) {
+                    dedupGaugeChart.data.datasets[0].data = [0, 1];
+                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#e2e8f0', '#0284c7'];
+                    document.getElementById('gauge-ratio').textContent = '—';
+                    document.getElementById('gauge-sublabel').textContent = 'Awaiting first dedup run…';
+                } else {
+                    const ratio = d.dedup_ratio || 0;
+                    dedupGaugeChart.data.datasets[0].data = [ratio, Math.max(0.5, 100 - ratio)];
+                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#0284c7', '#cbd5e1'];
+                    document.getElementById('gauge-ratio').textContent = ratio.toFixed(1) + '%';
+                    document.getElementById('gauge-sublabel').textContent =
+                        (d.last_raw_count || 0).toLocaleString() + ' raw → ' +
+                        (d.last_journey_count || 0).toLocaleString() + ' journeys';
+                }
+                dedupGaugeChart.update();
+            }
+
+            const chaosActive = !!d.chaos_mode;
+
+            document.getElementById('status-last-dedup').textContent = formatTime(d.last_dedup_run);
+
+            if (d.last_dedup_run && d.last_dedup_run !== lastDedupRunAt) {
+                if (lastDedupRunAt !== null) playKaChing();
+                lastDedupRunAt = d.last_dedup_run;
+            }
+
+        } catch (e) {}
+    }
+
+    async function pollThroughput() {
+        if (!throughputChart) return;
+        try {
+            const res = await fetch('/api/stats/throughput?buckets=30');
+            if (!res.ok) return;
+            const d = await res.json();
+            if (!d.data || !Array.isArray(d.data)) return;
+
+            const labels = d.data.map(function(point) {
+                const t = new Date(point.timestamp);
+                return String(t.getHours()).padStart(2, '0') + ':' +
+                       String(t.getMinutes()).padStart(2, '0') + ':' +
+                       String(t.getSeconds()).padStart(2, '0');
+            });
+            const values = d.data.map(function(point) { return point.pps; });
+
+            throughputChart.data.labels = labels;
+            throughputChart.data.datasets[0].data = values;
+            throughputChart.update('none');
+        } catch (e) {}
+    }
+
+    async function pollPlaza() {
+        try {
+            const res = await fetch('/api/stats/plaza');
+            if (!res.ok) return;
+            const d = await res.json();
+            if (!d.plazas) return;
+
+            currentPlazaData = d.plazas;
+            renderPlazaTable();
+            updateMapMarkers(d.plazas);
+        } catch (e) {}
+    }
+
+    function renderPlazaTable() {
+        const plazas = currentPlazaData;
+        const tbody = document.getElementById('plaza-table-body');
+        const entries = Object.values(plazas);
+
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No data yet - start a generator</td></tr>';
+            return;
+        }
+
+        entries.sort(function(a, b) {
+            const av = a[plazaSortKey], bv = b[plazaSortKey];
+            if (typeof av === 'string') return plazaSortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+            return plazaSortAsc ? av - bv : bv - av;
+        });
+
+        let maxPings = 0;
+        entries.forEach(function(e) { if (e.total_pings > maxPings) maxPings = e.total_pings; });
+
+        tbody.innerHTML = entries.map(function(p) {
+            const isBusiest = p.total_pings === maxPings && maxPings > 0;
+            return '<tr class="' + (isBusiest ? 'busiest' : '') + '">' +
+                '<td>' + escapeHtml(formatPlazaName(p.plaza_id)) + '</td>' +
+                '<td>' + (p.total_pings || 0).toLocaleString() + '</td>' +
+                '<td>' + (p.unique_tags || 0).toLocaleString() + '</td>' +
+                '<td>' + (p.duplicates || 0).toLocaleString() + '</td>' +
+                '<td><span class="region-badge">' + escapeHtml(p.region || '—') + '</span></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function sortPlazaTable(key) {
+        if (plazaSortKey === key) {
+            plazaSortAsc = !plazaSortAsc;
+        } else {
+            plazaSortKey = key;
+            plazaSortAsc = false;
+        }
+        renderPlazaTable();
+    }
+
+    
+
+    async function pollHealth() {
+        try {
+            const res = await fetch('/api/health');
+            if (!res.ok) { document.getElementById('status-health').textContent = 'ERROR'; return; }
+            const d = await res.json();
+            document.getElementById('status-backend').textContent = d.storage_backend || '—';
+            document.getElementById('status-worker').textContent = d.dedup_worker_running ? 'running' : 'stopped';
+            document.getElementById('status-health').textContent = d.status || '—';
+        } catch (e) {
+            document.getElementById('status-health').textContent = 'OFFLINE';
+        }
+    }
+
+    // ──────────────────────────────── CONTROLS ────────────────────────────────
+    async function toggleChaos() {
+        try { await fetch('/api/chaos', { method: 'POST' }); } catch (e) {}
+    }
+
+    async function triggerDedup() {
+        const btn = document.getElementById('trigger-dedup-btn');
+        btn.disabled = true;
+        btn.textContent = 'Running...';
+        try {
+            const res = await fetch('/api/dedup/trigger', { method: 'POST' });
+            const d = await res.json();
+            btn.textContent = 'DONE: ' + (d.raw_count || 0) + ' -> ' + (d.journey_count || 0);
+            setTimeout(() => { btn.textContent = 'Trigger Dedup Now'; btn.disabled = false; }, 2000);
+        } catch (e) {
+            btn.textContent = 'Error';
+            setTimeout(() => { btn.textContent = 'Trigger Dedup Now'; btn.disabled = false; }, 2000);
+        }
+    }
+
+    function onSliderInput(val) { document.getElementById('slider-val').textContent = val + 's'; }
+    const sendSliderUpdate = debounce(function(val) {
+        fetch('/api/dedup/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ interval_seconds: parseInt(val, 10) })
+        });
+    }, 400);
+    function onSliderChange(val) { sendSliderUpdate(val); }
+
+    async function loadDedupConfig() {
+        try {
+            const res = await fetch('/api/dedup/config');
+            if (!res.ok) return;
+            const d = await res.json();
+            if (d.interval_seconds != null) {
+                const slider = document.getElementById('dedup-slider');
+                const clamped = Math.max(10, Math.min(60, d.interval_seconds));
+                slider.value = clamped;
+                document.getElementById('slider-val').textContent = clamped + 's';
+            }
+        } catch (e) {}
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ AUDIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    function playKaChing() {
+        if (typeof soundEnabled === "undefined" || typeof audioCtx === "undefined" || !soundEnabled || !audioCtx) return;
+        try {
+            const t = audioCtx.currentTime;
+            [800, 1200].forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t + i * 0.08);
+                gain.gain.setValueAtTime(0.08, t + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.25);
+                osc.start(t + i * 0.08);
+                osc.stop(t + i * 0.08 + 0.25);
+            });
+        } catch (e) {}
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('live-clock').textContent =
+            String(now.getHours()).padStart(2, '0') + ':' +
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0');
+    }
+
+    function startPolling() {
+        (function loopStats() { pollStats().finally(() => setTimeout(loopStats, POLL_STATS_MS)); })();
+        (function loopThroughput() { pollThroughput().finally(() => setTimeout(loopThroughput, POLL_THROUGHPUT_MS)); })();
+        (function loopPlaza() { pollPlaza().finally(() => setTimeout(loopPlaza, POLL_PLAZA_MS)); })();
+        
+        (function loopHealth() { pollHealth().finally(() => setTimeout(loopHealth, POLL_HEALTH_MS)); })();
+    }
+
+    function init() {
+        counters.totalPings.el    = document.getElementById('hero-total-pings');
+        counters.totalJourneys.el = document.getElementById('hero-total-journeys');
+        counters.dedupRatio.el    = document.getElementById('hero-dedup-ratio');
+        counters.pps.el           = document.getElementById('hero-pps');
+
+        
+        initMap();
+        initCharts();
+        loadDedupConfig();
+        requestAnimationFrame(tickCounters);
+        updateClock(); setInterval(updateClock, 1000);
+        startPolling();
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(init, 1);
+    } else {
+        document.addEventListener('DOMContentLoaded', init);
+    }
+    </script>
+</body>
+</html>

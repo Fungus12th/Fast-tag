@@ -43,27 +43,16 @@ except ImportError:
 # Plaza Registry (must match templates/index.html KNOWN_PLAZAS)
 # ─────────────────────────────────────────────────────────────────────────────
 PLAZA_REGISTRY = {
-    "DELHI": [
-        "Place1Delhi",
-        "Place2Delhi",
-        "Place3Delhi",
-        "Place4Delhi",
-    ],
-    "CHENNAI": [
-        "Place1Chennai",
-        "Place2Chennai",
-        "Place3Chennai",
-    ],
-    "MUMBAI": [
-        "Place1Mumbai",
-        "Place2Mumbai",
-        "Place3Mumbai",
-        "Place4Mumbai",
-    ],
-    "OTHER": [
-        "Place1Other",
-        "Place2Other",
-    ],
+    "DELHI":      ["Place1Delhi", "Place2Delhi", "Place3Delhi"],
+    "KOLKATA":    ["Place1Kolkata", "Place2Kolkata", "Place3Kolkata"],
+    "MUMBAI":     ["Place1Mumbai", "Place2Mumbai", "Place3Mumbai"],
+    "BENGALURU":  ["Place1Bengaluru", "Place2Bengaluru", "Place3Bengaluru"],
+    "CHENNAI":    ["Place1Chennai", "Place2Chennai", "Place3Chennai"],
+    "HYDERABAD":  ["Place1Hyderabad", "Place2Hyderabad", "Place3Hyderabad"],
+    "AHMEDABAD":  ["Place1Ahmedabad", "Place2Ahmedabad", "Place3Ahmedabad"],
+    "SURAT":      ["Place1Surat", "Place2Surat", "Place3Surat"],
+    "PUNE":       ["Place1Pune", "Place2Pune", "Place3Pune"],
+    "JAIPUR":     ["Place1Jaipur", "Place2Jaipur", "Place3Jaipur"],
 }
 
 LANE_IDS = ["LANE_1", "LANE_2", "LANE_3", "LANE_4"]
@@ -403,9 +392,9 @@ Examples:
     )
     parser.add_argument(
         "--region", "-r",
-        choices=["ALL", "DELHI", "CHENNAI", "MUMBAI", "OTHER"],
-        default="ALL",
-        help="Geographic region this generator simulates (default: NORTH)",
+        type=str,
+        default="DELHI,MUMBAI,CHENNAI,BENGALURU,KOLKATA",
+        help="Geographic region(s) this generator simulates (e.g. ALL, or comma-separated like DELHI,MUMBAI,CHENNAI,BENGALURU,KOLKATA)",
     )
     parser.add_argument(
         "--workers", "-w",
@@ -431,11 +420,21 @@ Examples:
     args = parser.parse_args()
 
     base_url = f"http://{args.server}:{args.port}"
-    region = args.region
-    if region == "ALL":
+    region_arg = (args.region or "ALL").strip().upper()
+    if region_arg == "ALL":
         plazas = [p for r in PLAZA_REGISTRY.values() for p in r]
+        region_display = "ALL (10 Cities)"
     else:
-        plazas = PLAZA_REGISTRY.get(region, PLAZA_REGISTRY["DELHI"])
+        selected_cities = [c.strip() for c in region_arg.split(",") if c.strip()]
+        plazas = []
+        for city in selected_cities:
+            if city in PLAZA_REGISTRY:
+                plazas.extend(PLAZA_REGISTRY[city])
+        if not plazas:
+            plazas = PLAZA_REGISTRY["DELHI"]
+            region_display = "DELHI"
+        else:
+            region_display = ", ".join(selected_cities)
 
     # ─── Banner ──────────────────────────────────────────────────────────
     print(f"""
@@ -443,7 +442,7 @@ Examples:
   FASTag DA-2 — Load Generator (Part 3)
 ════════════════════════════════════════════════════════════════{C.RESET}
   {C.WHITE}Server:{C.RESET}     {base_url}
-  {C.WHITE}Region:{C.RESET}     {region}
+  {C.WHITE}Region:{C.RESET}     {region_display}
   {C.WHITE}Plazas:{C.RESET}     {', '.join(plazas)}
   {C.WHITE}Workers:{C.RESET}    {args.workers}
   {C.WHITE}Batch size:{C.RESET} {args.batch} pings/batch
@@ -478,7 +477,7 @@ Examples:
             base_url=base_url,
             tag_pool=tag_pool,
             plazas=plazas,
-            region=region,
+            region=region_display,
             batch_size=args.batch,
             base_delay=args.delay,
             chaos_monitor=chaos_monitor,

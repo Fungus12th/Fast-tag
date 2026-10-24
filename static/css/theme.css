@@ -1,0 +1,360 @@
+/* ==========================================================================
+   FASTag SaaS Theme — Modern Sky/Ice Blue Design System (Stripe / CloudWatch)
+   ========================================================================== */
+
+:root {
+  /* Colors */
+  --bg:            #f0f7ff;   /* page background, ice blue */
+  --surface:       #ffffff;   /* cards & panels */
+  --surface-alt:   #f8fafc;   /* table stripes, secondary controls */
+  --border:        #e2e8f0;   /* crisp 1px borders */
+  --border-strong: #cbd5e1;
+  --primary:       #0284c7;   /* sky blue accent */
+  --primary-hover: #0369a1;
+  --primary-soft:  #e0f2fe;   /* tinted backgrounds, active pills */
+  --text:          #0f172a;   /* high contrast dark slate */
+  --text-muted:    #475569;   /* readable secondary text */
+  --text-faint:    #94a3b8;   /* captions and placeholders */
+  
+  /* Status Colors */
+  --success:       #16a34a;
+  --success-bg:    #dcfce7;
+  --danger:        #dc2626;
+  --danger-bg:     #fee2e2;
+  --warning:       #d97706;
+  --warning-bg:    #fef3c7;
+  
+  /* Dark Terminal Tokens */
+  --editor-bg:     #0f172a;
+  --editor-header: #020617;
+  --editor-border: #1e293b;
+  --editor-text:   #f8fafc;
+
+  /* Shadows & Radius */
+  --shadow-sm:     0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md:     0 4px 12px rgba(2, 132, 199, 0.07);
+  --shadow-lg:     0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  --radius:        12px;
+  --radius-sm:     8px;
+  --radius-pill:   9999px;
+
+  /* Typography */
+  --font-display:  'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:     'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:     'JetBrains Mono', monospace;
+}
+
+/* Base Reset */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--bg);
+  background-image: linear-gradient(180deg, #e0f2fe 0%, #f0f7ff 180px);
+  background-repeat: no-repeat;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Global Navigation Bar */
+.saas-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.saas-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.saas-nav-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 7px 13px;
+  border-radius: var(--radius-sm);
+  transition: all 150ms ease;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saas-nav-link:hover {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.saas-nav-link.active {
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-color: rgba(2, 132, 199, 0.2);
+  font-weight: 600;
+}
+
+.saas-nav-clock {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Cards */
+.saas-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.saas-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.saas-card-title {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Buttons */
+.saas-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-decoration: none;
+  border: 1px solid transparent;
+  outline: none;
+}
+
+.saas-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.saas-btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+}
+
+.saas-btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.saas-btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.saas-btn-secondary:hover {
+  background: var(--surface-alt);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.saas-btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+  border-color: var(--danger);
+}
+
+.saas-btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* Badges */
+.saas-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.saas-badge-success {
+  background: var(--success-bg);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.saas-badge-danger {
+  background: var(--danger-bg);
+  color: #b91c1c;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.saas-badge-primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+}
+
+.saas-badge-pk {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.saas-badge-fk {
+  background: #fdf4ff;
+  color: #86198f;
+  border: 1px solid #f5d0fe;
+}
+
+/* Tables */
+.saas-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.saas-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.saas-table th {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.saas-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.saas-table tr:last-child td {
+  border-bottom: none;
+}
+
+.saas-table tr:hover td {
+  background: rgba(224, 242, 254, 0.4);
+}
+
+.saas-table td.money, .saas-table th.money {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+/* Forms & Inputs */
+.saas-form-group {
+  margin-bottom: 18px;
+}
+
+.saas-label {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.saas-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.925rem;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  outline: none;
+}
+
+.saas-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/* Callout Info Box */
+.saas-callout {
+  background: var(--primary-soft);
+  border-left: 4px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  color: #0369a1;
+  font-size: 0.9rem;
+}
+
+/* Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

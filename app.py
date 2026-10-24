@@ -9,14 +9,18 @@ import time
 import threading
 from datetime import datetime, timezone
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 
 import config
+import sql_ledger
 from db import create_storage
 from deduplicator import BatchDeduplicator
 
-# â”€â”€â”€ App Initialization â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app = Flask(__name__)
+app.secret_key = "fastag-secret-key-3nf-acid"
+
+# Initialize 3NF SQL Financial Ledger database (SQLite zero-bloat)
+sql_ledger.init_db()
 
 # Storage backend (Cassandra or in-memory)
 storage = create_storage()
@@ -36,42 +40,234 @@ chaos_lock = threading.Lock()
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # DASHBOARD ROUTE
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─────────────────────────────────────────────────────────────────────────────
+# MULTI-TIER AUTHENTICATION & ROUTE ACCESS CONTROLS
+# ─────────────────────────────────────────────────────────────────────────────
+def get_current_user():
+    """Returns currently authenticated user session or None."""
+    if "username" in session:
+        return {
+            "username": session.get("username"),
+            "role": session.get("role", "user"),
+            "full_name": session.get("full_name"),
+            "city": session.get("city"),
+            "user_id": session.get("user_id"),
+        }
+    return None
+
+def redirect_for_role(role, username=None):
+    """Returns appropriate redirect response based on role."""
+    if role == "admin":
+        return redirect("/dashboard")
+    elif role == "city":
+        return redirect(f"/city/{(username or '').lower()}")
+    elif role == "user":
+        return redirect(f"/portal/{(username or '').lower()}")
+    return redirect("/login")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROOT & LOGIN ROUTES (index.html is the Login Portal)
+# ─────────────────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
-    """Serve the main dashboard page."""
+    """
+    Root entrypoint: index.html is the Login Portal.
+    Redirects already authenticated sessions to their respective dashboards.
+    """
+    user = get_current_user()
+    if user:
+        return redirect_for_role(user["role"], user["username"])
     return render_template("index.html")
+
+@app.route("/login", methods=["GET", "POST"])
+def login_page():
+    """Unified multi-tier login portal."""
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        account = sql_ledger.authenticate_account(username, password)
+        if account:
+            session.clear()
+            session["username"] = account["username"]
+            session["role"] = account["role"]
+            session["full_name"] = account["full_name"]
+            session["city"] = account.get("city")
+            session["user_id"] = account.get("user_id")
+            return redirect_for_role(account["role"], account["username"])
+        return render_template("index.html", error="Invalid username or password.", username=username)
+    
+    user = get_current_user()
+    if user:
+        return redirect_for_role(user["role"], user["username"])
+    return render_template("index.html")
+
+@app.route("/logout")
+def logout():
+    """Log out of portal session and return to root login."""
+    session.clear()
+    return redirect("/")
+
+@app.route("/portal")
+def user_portal():
+    """Redirect to user dashboard if logged in, else to login page."""
+    user = get_current_user()
+    if user:
+        return redirect_for_role(user["role"], user["username"])
+    return redirect("/")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 1: VEHICLE OWNER PORTAL (Normal Users)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route("/portal/<username>")
+def user_dashboard(username):
+    """
+    Vehicle Owner Personal Dashboard.
+    Normal users can ONLY view their own balance, vehicles, and journey history.
+    """
+    user = get_current_user()
+    if not user:
+        return redirect("/")
+    
+    # Restrict normal users so they can ONLY view their own portal
+    if user["role"] == "user" and user["username"].lower() != username.lower():
+        return redirect(f"/portal/{user['username']}")
+    elif user["role"] == "city":
+        return redirect(f"/city/{user['username']}")
+
+    data = sql_ledger.get_user_dashboard_data(username)
+    if not data:
+        return "User not found in SQL database", 404
+    return render_template("user_dashboard.html", user_data=data, owner=data)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 2: REGIONAL / CITY STATION DASHBOARD (Local Database View)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route("/city/<city_name>")
+def city_dashboard(city_name):
+    """
+    City Regional Station Local Database View (e.g. /city/chennai).
+    Displays only the local database, local plazas, and passage events for THAT city.
+    """
+    user = get_current_user()
+    if not user:
+        return redirect("/")
+    
+    # Restrict city officers to their own city (admin has global access)
+    if user["role"] == "city" and user["username"].lower() != city_name.lower():
+        return redirect(f"/city/{user['username']}")
+    elif user["role"] == "user":
+        return redirect(f"/portal/{user['username']}")
+
+    data = sql_ledger.get_city_dashboard_data(city_name)
+    if not data:
+        return f"City region '{city_name}' not found", 404
+
+    # Extract local recent raw pings for this city's plazas
+    plaza_names = {p["plaza_name"] for p in data["plazas"]}
+    recent_raw = [
+        p for p in storage.get_recent_pings(300)
+        if p.get("region") == data["city_key"] or p.get("plaza_id") in plaza_names
+    ][:30]
+    data["recent_raw_pings"] = recent_raw
+
+    return render_template("city_dashboard.html", city=data)
+
+@app.route("/api/city/<city_name>/data")
+def api_city_data(city_name):
+    """API for real-time live polling of city local database events."""
+    data = sql_ledger.get_city_dashboard_data(city_name)
+    if not data:
+        return jsonify({"error": "City not found"}), 404
+
+    plaza_names = {p["plaza_name"] for p in data["plazas"]}
+    recent_raw = [
+        p for p in storage.get_recent_pings(300)
+        if p.get("region") == data["city_key"] or p.get("plaza_id") in plaza_names
+    ][:30]
+    data["recent_raw_pings"] = recent_raw
+    return jsonify(data)
+
+@app.route("/api/city/<city_name>/sql", methods=["POST"])
+def api_city_sql(city_name):
+    """Executes arbitrary read-only SQL strictly against this city's local node database."""
+    user = get_current_user()
+    if not user or (user["role"] == "user"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    if user["role"] == "city" and user["username"].lower() != city_name.lower():
+        return jsonify({"success": False, "error": f"Access denied: You are only authorized for {user['username']} node."}), 403
+
+    payload = request.get_json(silent=True) or request.form
+    query_str = (payload.get("query") or "").strip()
+    if not query_str:
+        return jsonify({"success": False, "error": "Empty query"}), 400
+
+    import ddbms_manager
+    res = ddbms_manager.execute_node_query(city_name, query_str)
+    return jsonify(res)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIER 3: GLOBAL MASTER OPERATIONS DASHBOARD & ADMIN SUITE (Admin Only)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route("/dashboard")
+def admin_dashboard():
+    """
+    Master Nationwide Live Operations Dashboard (Admin Only).
+    Shows nationwide ingestion, deduplication engine, and India Map across all 10 cities.
+    """
+    user = get_current_user()
+    if not user or user["role"] != "admin":
+        if user and user["role"] == "user":
+            return redirect(f"/portal/{user['username']}")
+        elif user and user["role"] == "city":
+            return redirect(f"/city/{user['username']}")
+        return redirect("/")
+    return render_template("dashboard.html")
 
 @app.route("/database")
 def database():
-    """Serve the database view page."""
+    """Global raw database stream view (Admin Only)."""
+    user = get_current_user()
+    if not user or user["role"] != "admin":
+        return redirect("/")
     return render_template("database.html")
 
 @app.route("/batch_output")
 def batch_output_page():
-    """Serve the batch output view page."""
+    """Batch output stream (Admin Only)."""
+    user = get_current_user()
+    if not user or user["role"] != "admin":
+        return redirect("/")
     return render_template("batch_output.html")
 
 @app.route("/summary")
 def summary_page():
-    """Serve the summarized plaza statistics page."""
+    """Plaza station summary (Admin Only)."""
+    user = get_current_user()
+    if not user or user["role"] != "admin":
+        return redirect("/")
     return render_template("summary.html")
 
 @app.route("/api/batch_output")
 def api_batch_output():
+    """Returns the latest deduplicated journeys from batch output."""
     import json
     import os
     if os.path.exists("batch_output.json"):
         with open("batch_output.json", "r") as f:
             try:
                 data = json.load(f)
-                # Return the last 100 entries reversed (newest first)
                 return jsonify({"data": data[::-1][:100]})
-            except:
+            except Exception:
                 return jsonify({"data": []})
     return jsonify({"data": []})
 
 @app.route("/api/batch_summary")
 def api_batch_summary():
+    """Returns plaza-level aggregation from batch output."""
     import json
     import os
     if os.path.exists("batch_output.json"):
@@ -90,66 +286,134 @@ def api_batch_summary():
                     summary[pid]["clean_journeys"] += 1
                     summary[pid]["duplicates_filtered"] += max(0, j.get("duplicate_count", 1) - 1)
                 
-                # Convert to list and sort by clean journeys descending
                 result = [{"plaza_id": k, **v} for k, v in summary.items()]
                 result.sort(key=lambda x: x["clean_journeys"], reverse=True)
                 return jsonify({"data": result})
-            except:
+            except Exception:
                 pass
     return jsonify({"data": []})
-
-@app.route("/portal")
-def user_portal():
-    """User Portal Login Page"""
-    from owners import OWNER_DATA
-    return render_template("portal.html", owners=OWNER_DATA)
-
-@app.route("/portal/<username>")
-def user_dashboard(username):
-    """User Portal Dashboard"""
-    from owners import OWNER_DATA
-    
-    # Find owner
-    owner_info = None
-    for k, v in OWNER_DATA.items():
-        if v["username"] == username:
-            owner_info = v
-            break
-            
-    if not owner_info:
-        return "User not found", 404
-        
-    return render_template("user_dashboard.html", owner=owner_info)
 
 @app.route("/api/portal/<username>/history")
 def user_history(username):
-    from owners import OWNER_DATA
-    import json
-    import os
-    
-    owner_info = None
-    for k, v in OWNER_DATA.items():
-        if v["username"] == username:
-            owner_info = v
-            break
-            
-    if not owner_info:
-        return jsonify({"data": []})
-        
-    cars = set(owner_info["cars"])
-    
-    if os.path.exists("batch_output.json"):
-        with open("batch_output.json", "r") as f:
-            try:
-                data = json.load(f)
-                # Filter journeys to only cars owned by this user
-                history = [j for j in data if j.get("tag_id") in cars]
-                # Reverse to show newest first
-                history.reverse()
-                return jsonify({"data": history[:500]}) # Max 500 records
-            except:
-                pass
-    return jsonify({"data": []})
+    """API returning live SQL ledger data for the user."""
+    data = sql_ledger.get_user_dashboard_data(username)
+    if not data:
+        return jsonify({"data": [], "wallet": {"current_balance": 0.0}})
+    return jsonify({
+        "data": data.get("journeys", []),
+        "wallet": data.get("wallet", {}),
+        "vehicles": data.get("vehicles", []),
+        "full_name": data.get("full_name")
+    })
+
+@app.route("/api/wallet/recharge", methods=["POST"])
+def recharge_wallet_api():
+    """Atomically adds funds to user wallet."""
+    payload = request.get_json(silent=True) or request.form
+    user_id = payload.get("user_id") or session.get("user_id")
+    try:
+        amount = float(payload.get("amount", 500.0))
+    except (TypeError, ValueError):
+        amount = 500.0
+
+    if not user_id:
+        return jsonify({"error": "User not authenticated"}), 401
+
+    new_balance = sql_ledger.recharge_wallet(int(user_id), amount)
+    return jsonify({"success": True, "new_balance": new_balance})
+
+@app.route("/sql_ledger")
+def sql_ledger_view():
+    """Inspect all 6 relational tables and ACID transactions live (Admin Only)."""
+    user = get_current_user()
+    if not user or user["role"] != "admin":
+        return redirect("/")
+    tables_data = sql_ledger.get_all_tables_data()
+    return render_template("sql_ledger.html", tables=tables_data)
+
+@app.route("/api/sql_ledger")
+def api_sql_ledger():
+    """Returns raw JSON of all 6 relational tables for live polling."""
+    return jsonify(sql_ledger.get_all_tables_data())
+
+@app.route("/sql_console")
+def sql_console_view():
+    """Interactive SQL query execution terminal for the central global database (Admin Only)."""
+    user = get_current_user()
+    if not user or user["role"] != "admin":
+        return redirect("/")
+    schema_info = sql_ledger.get_schema_info()
+    return render_template("sql_console.html", schema=schema_info)
+
+@app.route("/api/sql/execute", methods=["POST"])
+def api_sql_execute():
+    """Execute arbitrary SQL queries against the global database."""
+    payload = request.get_json(silent=True) or request.form
+    query_str = payload.get("query", "").strip()
+    result = sql_ledger.execute_raw_query(query_str)
+    return jsonify(result)
+
+@app.route("/api/sql/schema")
+def api_sql_schema():
+    """Returns live schema metadata and row counts for all tables."""
+    return jsonify(sql_ledger.get_schema_info())
+
+@app.route("/ddbms")
+def ddbms_view():
+    """DDBMS Architecture, Fragmentation Catalog & 2PC Visualizer (Admin & City Engineers)."""
+    user = get_current_user()
+    if not user or user["role"] == "user":
+        return redirect("/")
+    import ddbms_manager
+    catalog = ddbms_manager.get_ddbms_catalog()
+    return render_template("ddbms_architecture.html", catalog=catalog, user=user)
+
+@app.route("/api/ddbms/catalog")
+def api_ddbms_catalog():
+    """Returns live distributed fragmentation catalog metadata."""
+    import ddbms_manager
+    return jsonify(ddbms_manager.get_ddbms_catalog())
+
+@app.route("/api/ddbms/query", methods=["POST"])
+def api_ddbms_query():
+    """
+    Executes a federated or targeted distributed query with transparent execution plan.
+    Target can be 'FEDERATED' (Scatter-Gather) or a specific node (e.g. 'CHENNAI').
+    """
+    user = get_current_user()
+    if not user or user["role"] == "user":
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    payload = request.get_json(silent=True) or request.form
+    query_str = (payload.get("query") or "").strip()
+    target = (payload.get("target") or "FEDERATED").strip().upper()
+
+    if not query_str:
+        return jsonify({"success": False, "error": "Empty query"}), 400
+
+    import ddbms_manager
+    if target == "COORDINATOR":
+        # Run on central coordinator master database
+        res = sql_ledger.execute_raw_query(query_str)
+        res["execution_plan"] = {
+            "strategy": "Coordinator Master Scan (Single Site)",
+            "active_nodes": ["COORDINATOR_MASTER_01"],
+            "pruned_nodes": list(ddbms_manager.CITIES_METADATA.keys()),
+            "steps": [
+                {"step": 1, "phase": "Coordinator Execution", "detail": "Executed directly on central SQLite WAL database (fastag_ledger.db)."}
+            ]
+        }
+        return jsonify(res)
+    else:
+        res = ddbms_manager.execute_distributed_federated_query(query_str, target=target)
+        return jsonify(res)
+
+@app.route("/api/ddbms/reconstruct", methods=["GET"])
+def api_ddbms_reconstruct():
+    """Demonstrates vertical fragmentation reconstruction via lossless join."""
+    import ddbms_manager
+    limit = int(request.args.get("limit", 15))
+    return jsonify(ddbms_manager.demonstrate_vertical_reconstruction(limit=limit))
 
 
 

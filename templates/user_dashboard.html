@@ -2,135 +2,465 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ owner.name }}'s Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ user_data.full_name }} — FASTag Wallet & Journey Ledger</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; background: #e0f2e9; padding: 20px;}
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);}
-        .summary-box { background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; flex-wrap: wrap;}
-        .summary-item { margin: 10px 20px;}
-        .summary-title { font-size: 0.9em; color: #155724; text-transform: uppercase; font-weight: bold;}
-        .summary-value { font-size: 1.4em; color: #0b4a22; font-weight: bold; margin-top: 5px;}
-        .car-list { list-style-type: none; padding: 0; margin: 5px 0 0 0; font-size: 0.95em;}
-        .car-list li { margin-bottom: 3px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px;}
-        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left;}
-        th { background: #9acbb3; color: #111;}
-        tr:hover { background-color: #f1f8f4; }
-        .logout-btn { float: right; padding: 8px 12px; background: #c82333; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9em; font-weight: bold;}
-        .logout-btn:hover { background: #bd2130;}
-    </style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(var(--border) 2px, transparent 2px);
+            background-size: 30px 30px;
+            color: #111;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .btn-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 2px solid var(--primary);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-link:hover {
+            background: var(--primary-soft);
+            transform: translateY(-1px);
+        }
+        .btn-logout {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .btn-logout:hover {
+            background: #f1b0b7;
+        }
+        .header-profile {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .header-profile h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--primary);
+            font-size: 1.8rem;
+        }
+        .header-profile p {
+            color: #555;
+            font-size: 0.95rem;
+            margin-top: 4px;
+        }
+        .user-meta-badge {
+            display: inline-block;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+        .grid-summary {
+            display: grid;
+            grid-template-columns: 1fr 1.4fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        @media (max-width: 800px) {
+            .grid-summary { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .card-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #666;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .wallet-amount {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .wallet-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .btn-recharge {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-recharge:hover {
+            background: var(--primary-hover);
+            transform: scale(1.02);
+        }
+        .tag-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-active { background: var(--bg); color: var(--primary-hover); border: 1px solid var(--border); }
+        .badge-blocked { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .badge-success { background: var(--bg); color: var(--primary-hover); font-weight: 700; }
+        .badge-failed { background: #f8d7da; color: #721c24; font-weight: 700; }
+        
+        .table-mini {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        .table-mini th {
+            text-align: left;
+            padding: 8px 6px;
+            border-bottom: 2px solid #eee;
+            color: #666;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+        }
+        .table-mini td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .table-mini code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            background: #f5f5f5;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        /* Ledger Table */
+        .ledger-section {
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            padding: 24px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .ledger-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .ledger-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            color: var(--primary);
+        }
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-soft);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        table.ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+        table.ledger-table th {
+            background: var(--primary-soft);
+            color: var(--primary);
+            text-align: left;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border);
+        }
+        table.ledger-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        table.ledger-table tr:hover {
+            background: #fbfefc;
+        }
+        .failure-sub {
+            display: block;
+            font-size: 0.75rem;
+            color: #c82333;
+            margin-top: 2px;
+        }
+    body{background:var(--bg);background-image:linear-gradient(180deg,var(--primary-soft),var(--bg) 320px);color:var(--text)}.header-profile,.card,.ledger-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}.btn-link{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm)}.btn-link:hover{background:var(--primary-soft)}.header-profile h1,.ledger-title{color:var(--text)}.header-profile p,.card-title,.table-mini th{color:var(--text-muted)}.user-meta-badge,.live-indicator{background:var(--primary-soft);border-radius:var(--radius-pill)}.card:first-child{background:linear-gradient(135deg,var(--primary) 0%,#0ea5e9 100%);color:#fff;border:0}.card:first-child .card-title,.card:first-child p,.card:first-child .wallet-amount{color:#fff}.btn-recharge{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.45);border-radius:var(--radius-pill)}.tag-badge,.badge-active,.badge-success,.badge-blocked,.badge-failed{border-radius:var(--radius-pill)}.badge-active,.badge-success{background:var(--success-bg);color:#15803d;border-color:transparent}.badge-blocked,.badge-failed{background:var(--danger-bg);color:#b91c1c;border-color:transparent}table.ledger-table th,.table-mini th{position:sticky;top:0;z-index:1;background:var(--surface-alt)}</style>
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body>
     <div class="container">
-        <a href="/portal" class="logout-btn">Log Out</a>
-        <h1 style="color: #0b4a22; margin-top: 0;">Welcome, {{ owner.name }}!</h1>
-        <p>Your FASTag travel summary and toll plaza history.</p>
-        
-        <div class="summary-box">
-            <div class="summary-item">
-                <div class="summary-title">Total Trips</div>
-                <div class="summary-value" id="stat-total">0</div>
+        <!-- Top Nav -->
+        <div class="nav-bar">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-family: var(--font-display); font-weight: 700; font-size: 1.15rem; color: var(--primary);">🚗 FASTag Vehicle Owner Portal</span>
+                <span class="user-meta-badge" style="margin-left: 0;">Personal Account</span>
             </div>
-            <div class="summary-item">
-                <div class="summary-title">Most Visited Plaza</div>
-                <div class="summary-value" id="stat-plaza" style="font-size: 1.1em;">-</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-title">Trips per Vehicle</div>
-                <ul class="car-list" id="stat-cars">
-                    {% for car in owner.cars %}
-                    <li>{{ car }}: <strong>0</strong></li>
-                    {% endfor %}
-                </ul>
+            <div>
+                <a href="/logout" class="btn-link btn-logout">Sign Out</a>
             </div>
         </div>
-        
-        <h3 style="color: #0b4a22; border-bottom: 2px solid #9acbb3; padding-bottom: 5px;">Detailed Travel Log</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date & Time</th>
-                    <th>Vehicle (Tag)</th>
-                    <th>Toll Plaza</th>
-                    <th>Region</th>
-                </tr>
-            </thead>
-            <tbody id="history-body">
-                <tr><td colspan="4" style="text-align: center;">Loading travel history...</td></tr>
-            </tbody>
-        </table>
+
+        <!-- Profile Bar -->
+        <div class="header-profile">
+            <div>
+                <h1>
+                    {{ user_data.full_name }}
+                    <span class="user-meta-badge">@{{ user_data.username }}</span>
+                </h1>
+                <p>Phone: <strong>{{ user_data.phone_number }}</strong> &nbsp;|&nbsp; Layer 3: Relational SQL Account</p>
+            </div>
+            <div>
+                <span class="live-indicator">
+                    <span class="live-dot"></span> ACID Ledger Live
+                </span>
+            </div>
+        </div>
+
+        <!-- Summary Grid -->
+        <div class="grid-summary">
+            <!-- Wallet Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Prepaid Wallet Balance</span>
+                    <span style="font-size: 0.75rem; color: #28a745;">ACID Protected</span>
+                </div>
+                <div class="wallet-amount">
+                    ₹<span id="wallet-val">{{ "%.2f"|format(user_data.wallet.current_balance) }}</span>
+                </div>
+                <p style="font-size: 0.8rem; color: #666;">
+                    Strict <code>CHECK (current_balance >= 0.00)</code> constraint enforced.
+                </p>
+                <div class="wallet-actions">
+                    <button class="btn-recharge" onclick="recharge(500)">+ Top Up ₹500</button>
+                    <button class="btn-recharge" style="background:var(--primary-hover);" onclick="recharge(200)">+ Top Up ₹200</button>
+                </div>
+            </div>
+
+            <!-- Vehicles Card -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Registered Vehicles & RFID Tags</span>
+                    <span>{{ user_data.vehicles|length }} Assets</span>
+                </div>
+                <table class="table-mini">
+                    <thead>
+                        <tr>
+                            <th>Reg Number</th>
+                            <th>Class</th>
+                            <th>RFID Tag</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in user_data.vehicles %}
+                        <tr>
+                            <td><strong>{{ v.registration_no }}</strong></td>
+                            <td>{{ v.vehicle_class }}</td>
+                            <td><code>{{ v.tag_id }}</code></td>
+                            <td>
+                                {% if v.status == 'ACTIVE' %}
+                                <span class="tag-badge badge-active">ACTIVE</span>
+                                {% else %}
+                                <span class="tag-badge badge-blocked">BLOCKED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Journeys Ledger -->
+        <div class="ledger-section">
+            <div class="ledger-header">
+                <div>
+                    <h2 class="ledger-title">Financial Transaction & Journey Ledger</h2>
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 4px;">
+                        Immutable audit log of deduplicated toll events processed via <code>Process_Toll_Batch</code>.
+                    </p>
+                </div>
+                <div>
+                    <span id="trip-count" style="font-weight: bold; color: var(--primary);">
+                        {{ user_data.journeys|length }} records
+                    </span>
+                </div>
+            </div>
+
+            <table class="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Journey ID</th>
+                        <th>Timestamp</th>
+                        <th>FASTag Tag ID</th>
+                        <th>Plaza & Highway</th>
+                        <th>Deduction</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="journeys-body">
+                    {% if user_data.journeys %}
+                        {% for j in user_data.journeys %}
+                        <tr>
+                            <td><code>#{{ j.journey_id }}</code></td>
+                            <td>{{ j.timestamp[:19].replace('T', ' ') }}</td>
+                            <td><strong>{{ j.tag_id }}</strong></td>
+                            <td>{{ j.plaza_name }} <span style="font-size: 0.8em; color: #666;">({{ j.highway_name }})</span></td>
+                            <td><strong>₹{{ "%.2f"|format(j.deducted_amount) }}</strong></td>
+                            <td>
+                                {% if j.payment_status == 'SUCCESS' %}
+                                <span class="tag-badge badge-success">✓ SUCCESS</span>
+                                {% else %}
+                                <span class="tag-badge badge-failed">✗ FAILED</span>
+                                {% if j.failure_reason %}
+                                <span class="failure-sub">{{ j.failure_reason }}</span>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #888; padding: 24px;">
+                                No toll transactions recorded yet. Run the generator to see real-time deductions!
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    
+
     <script>
-        async function fetchHistory() {
+        const USERNAME = "{{ user_data.username }}";
+        const USER_ID = {{ user_data.user_id }};
+
+        // Live Poll every 2.5 seconds
+        async function refreshData() {
             try {
-                const res = await fetch('/api/portal/{{ owner.username }}/history');
+                const res = await fetch(`/api/portal/${USERNAME}/history`);
+                if (!res.ok) return;
                 const json = await res.json();
                 
-                const tbody = document.getElementById('history-body');
-                tbody.innerHTML = '';
-                
-                if (json.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No recent travel history found for your vehicles.</td></tr>';
-                    return;
+                // Update wallet
+                if (json.wallet && typeof json.wallet.current_balance !== 'undefined') {
+                    document.getElementById('wallet-val').innerText = Number(json.wallet.current_balance).toFixed(2);
                 }
-                
-                let carCounts = {};
-                let plazaCounts = {};
-                
-                json.data.forEach(trip => {
-                    // Track stats
-                    carCounts[trip.tag_id] = (carCounts[trip.tag_id] || 0) + 1;
-                    plazaCounts[trip.plaza_id] = (plazaCounts[trip.plaza_id] || 0) + 1;
-                    
-                    // Build table row
-                    const tr = document.createElement('tr');
-                    
-                    // Format date nicely
-                    const dateObj = new Date(trip.ping_timestamp);
-                    const dateStr = dateObj.toLocaleDateString();
-                    const timeStr = dateObj.toLocaleTimeString();
-                    
-                    tr.innerHTML = `
-                        <td><strong>${dateStr}</strong> <span style="color: #666; font-size: 0.9em;">${timeStr}</span></td>
-                        <td style="font-weight: bold; color: #0b4a22;">${trip.tag_id}</td>
-                        <td>${trip.plaza_id}</td>
-                        <td>${trip.region}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-                
-                // Calculate Most Visited
-                let mostVisited = "-";
-                let maxVisits = 0;
-                for (const [plaza, count] of Object.entries(plazaCounts)) {
-                    if (count > maxVisits) {
-                        maxVisits = count;
-                        mostVisited = plaza;
-                    }
+
+                // Update journeys
+                const tbody = document.getElementById('journeys-body');
+                const list = json.data || [];
+                document.getElementById('trip-count').innerText = `${list.length} records`;
+
+                if (list.length > 0) {
+                    tbody.innerHTML = list.map(j => {
+                        const isSuccess = j.payment_status === 'SUCCESS';
+                        const timeClean = (j.timestamp || '').slice(0, 19).replace('T', ' ');
+                        const failureHtml = j.failure_reason ? `<span class="failure-sub">${j.failure_reason}</span>` : '';
+                        return `
+                            <tr>
+                                <td><code>#${j.journey_id}</code></td>
+                                <td>${timeClean}</td>
+                                <td><strong>${j.tag_id}</strong></td>
+                                <td>${j.plaza_name || 'Plaza ' + j.plaza_id} <span style="font-size: 0.8em; color: #666;">(${j.highway_name || ''})</span></td>
+                                <td><strong>₹${Number(j.deducted_amount || 0).toFixed(2)}</strong></td>
+                                <td>
+                                    <span class="tag-badge ${isSuccess ? 'badge-success' : 'badge-failed'}">
+                                        ${isSuccess ? '✓ SUCCESS' : '✗ FAILED'}
+                                    </span>
+                                    ${failureHtml}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
                 }
-                
-                // Update UI Stats
-                document.getElementById('stat-total').innerText = json.data.length;
-                document.getElementById('stat-plaza').innerText = mostVisited;
-                
-                // Update per-car stats
-                let carHtml = '';
-                // Use the owner's predefined cars array to ensure all show up, even if 0
-                const registeredCars = {{ owner.cars | tojson }};
-                registeredCars.forEach(car => {
-                    let count = carCounts[car] || 0;
-                    carHtml += `<li>${car}: <strong>${count}</strong></li>`;
-                });
-                document.getElementById('stat-cars').innerHTML = carHtml;
-                
-            } catch (e) {
-                console.error("Error fetching history:", e);
+            } catch (err) {
+                console.error("Poll error:", err);
             }
         }
-        
-        fetchHistory();
-        setInterval(fetchHistory, 3000); // Auto refresh
+
+        setInterval(refreshData, 2500);
+
+        async function recharge(amount) {
+            try {
+                const res = await fetch('/api/wallet/recharge', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: USER_ID, amount: amount })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('wallet-val').innerText = Number(data.new_balance).toFixed(2);
+                }
+            } catch (err) {
+                alert("Recharge error: " + err);
+            }
+        }
     </script>
 </body>
 </html>

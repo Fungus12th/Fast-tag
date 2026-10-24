@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASTag Global Database — SQL Query Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(var(--border) 2px, transparent 2px);
+            background-size: 30px 30px;
+            color: #111;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn-nav {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 2px solid var(--primary);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.06);
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .btn-nav:hover {
+            background: var(--primary-soft);
+            transform: translateY(-1px);
+        }
+        .header-banner {
+            background: white;
+            padding: 20px 24px;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+            margin-bottom: 20px;
+        }
+        .header-banner h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--primary);
+            font-size: 1.7rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header-banner p {
+            color: #555;
+            margin-top: 6px;
+            font-size: 0.92rem;
+            line-height: 1.4;
+        }
+        .arch-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+        }
+
+        /* Two Column Layout */
+        .console-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 950px) {
+            .console-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Schema Sidebar */
+        .sidebar-card {
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            padding: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+        .sidebar-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+        .table-item:hover {
+            border-color: var(--primary);
+        }
+        .table-item-header {
+            padding: 10px 12px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background: #ffffff;
+        }
+        .table-item-header:hover {
+            background: var(--primary-soft);
+        }
+        .table-badge-cnt {
+            font-size: 0.75rem;
+            background: #e2e8f0;
+            padding: 2px 7px;
+            border-radius: 12px;
+            color: #475569;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .columns-list {
+            padding: 8px 12px;
+            font-size: 0.78rem;
+            color: #64748b;
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid #f1f5f9;
+            line-height: 1.5;
+            display: none;
+        }
+        .columns-list.show {
+            display: block;
+        }
+
+        /* Main Console */
+        .main-card {
+            background: white;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .presets-bar {
+            margin-bottom: 14px;
+        }
+        .presets-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .presets-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .chip-btn {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .chip-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Editor Section */
+        .editor-container {
+            background: var(--editor-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 16px;
+        }
+        .editor-toolbar {
+            background: #0f172a;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+        .editor-toolbar span {
+            color: #94a3b8;
+            font-size: 0.78rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .editor-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-toolbar {
+            background: #334155;
+            color: #f8fafc;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-toolbar:hover {
+            background: #475569;
+        }
+        #sql-input {
+            width: 100%;
+            height: 140px;
+            background: var(--editor-bg);
+            color: #e2e8f0;
+            border: none;
+            padding: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            outline: none;
+            resize: vertical;
+        }
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .btn-execute {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 8px rgba(2, 132, 199, 0.2);
+            transition: all 0.2s;
+        }
+        .btn-execute:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        .hint-text {
+            font-size: 0.8rem;
+            color: #666;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Results Section */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .status-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .results-box {
+            overflow-x: auto;
+            max-height: 480px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        table.result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+        table.result-table th {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            border-bottom: 2px solid #cbd5e1;
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            z-index: 1;
+        }
+        table.result-table td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.84rem;
+        }
+        table.result-table tr:hover {
+            background: #f8fafc;
+        }
+    body{background:var(--bg);background-image:linear-gradient(180deg,var(--primary-soft),var(--bg) 300px);color:var(--text)}.btn-nav,.header-banner,.sidebar-card,.main-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}.arch-badge{background:var(--primary-soft);border-radius:var(--radius-pill)}.chip-btn{background:transparent;border:1px solid var(--primary);color:var(--primary);border-radius:var(--radius-pill)}.editor-container{background:var(--editor-bg)}.result-table th{position:sticky;top:0;z-index:1}.status-error{background:var(--danger-bg);color:#b91c1c;border-radius:var(--radius-pill)}.blocked,.danger-badge{background:var(--danger-bg);color:#b91c1c;border-radius:var(--radius-pill)}.target-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}.target-row label{font-weight:700;color:var(--text-muted);font-size:.82rem;text-transform:uppercase}.target-row select{padding:9px 12px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:inherit}.dqp-card{background:var(--surface-alt);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px}.dqp-card h3{font-family:var(--font-display);margin-bottom:10px}.dqp-list{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}.dqp-pill{padding:4px 9px;border-radius:var(--radius-pill);background:var(--primary-soft);color:var(--primary);font-size:.76rem;font-weight:700}.dqp-pill.pruned{background:var(--danger-bg);color:#b91c1c}.dqp-step{padding:8px 0;border-top:1px solid var(--border);font-size:.86rem}.dqp-step strong{color:var(--primary)}
+    </style>
+    <link rel="stylesheet" href="/static/css/theme.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Top Nav -->
+        <div class="top-nav">
+            <div class="nav-links">
+                <a href="/" class="btn-nav">← Main Live Dashboard</a>
+                <a href="/sql_ledger" class="btn-nav">📊 3NF SQL Tables</a>
+                <a href="/portal" class="btn-nav">🔑 Owner Portal / Login</a>
+                <a href="/ddbms" class="btn-nav">🌐 DDBMS Architecture</a>
+            </div>
+            <div>
+                <a href="/database" class="btn-nav">NoSQL Raw Stream</a>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <div class="header-banner">
+            <h1>
+                ⚡ FASTag Global Database — SQL Query Console
+            </h1>
+            <p>
+                Query the centralized relational database directly. This unified SQL store aggregates and reconciles 
+                all incoming raw sensor traffic streaming from the regional edge plazas (Delhi, Mumbai, Chennai) into a single 
+                ACID-compliant system of record.
+            </p>
+            <span class="arch-badge">
+                Central Storage: <code>fastag_ledger.db</code> &nbsp;•&nbsp; Engine: SQLite WAL Mode &nbsp;•&nbsp; Strict 3NF
+            </span>
+        </div>
+
+        <!-- Console Grid -->
+        <div class="console-grid">
+            <!-- Sidebar Schema -->
+            <div class="sidebar-card">
+                <div class="sidebar-title">
+                    <span>Database Tables</span>
+                    <button class="btn-toolbar" style="background:#e2e8f0; color:#333;" onclick="fetchSchema()">↻</button>
+                </div>
+                <div id="schema-container">
+                    {% for tbl_name, info in schema.items() %}
+                    <div class="table-item">
+                        <div class="table-item-header" onclick="setQuery('SELECT * FROM {{ tbl_name }} LIMIT 25;')">
+                            <span>{{ tbl_name }}</span>
+                            <span class="table-badge-cnt">{{ info.count }} rows</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p style="font-size: 0.75rem; color: #777; margin-top: 14px;">
+                    💡 Click any table to generate a <code>SELECT *</code> query.
+                </p>
+            </div>
+
+            <!-- Main Terminal Area -->
+            <div class="main-card">
+                <!-- Preset Queries -->
+                <div class="presets-bar">
+                    <span class="presets-label">Preset Analytical Queries (Viva / Demo Ready)</span>
+                    <div class="presets-chips">
+                        <button class="chip-btn" onclick="loadPreset('federatedRevenue')">🌐 Federated Revenue by Region</button>
+                        <button class="chip-btn" onclick="loadPreset('predicatePruning')">🎯 Predicate Pruning (Chennai)</button>
+                        <button class="chip-btn" onclick="loadPreset('scatterGather')">⚡ Scatter-Gather Journeys</button>
+                        <button class="chip-btn" onclick="loadPreset('reconciliation')">📊 Reconciliation Summary</button>
+                        <button class="chip-btn" onclick="loadPreset('balances')">💰 User Balances & Vehicles</button>
+                        <button class="chip-btn" onclick="loadPreset('plazas')">🛣️ Revenue by Toll Plaza</button>
+                        <button class="chip-btn" onclick="loadPreset('failed')">⚠️ Blocked Tag Audit (Safe Failure)</button>
+                        <button class="chip-btn" onclick="loadPreset('audit')">🔗 5-Table Full Audit Trail</button>
+                    </div>
+                </div>
+
+                <div class="target-row">
+                    <label for="target-node">Node Target</label>
+                    <select id="target-node">
+                        <option value="COORDINATOR">COORDINATOR (Global Coordinator Master: fastag_ledger.db)</option>
+                        <option value="FEDERATED" selected>FEDERATED (Distributed Scatter-Gather Federation across 10 Edge Nodes)</option>
+                        <option value="DELHI">DELHI</option><option value="MUMBAI">MUMBAI</option><option value="KOLKATA">KOLKATA</option><option value="BENGALURU">BENGALURU</option><option value="CHENNAI">CHENNAI</option><option value="HYDERABAD">HYDERABAD</option><option value="AHMEDABAD">AHMEDABAD</option><option value="SURAT">SURAT</option><option value="PUNE">PUNE</option><option value="JAIPUR">JAIPUR</option>
+                    </select>
+                </div>
+
+                <!-- Editor -->
+                <div class="editor-container">
+                    <div class="editor-toolbar">
+                        <span>SQL QUERY TERMINAL</span>
+                        <div class="editor-actions">
+                            <button class="btn-toolbar" onclick="clearEditor()">Clear</button>
+                            <button class="btn-toolbar" onclick="setQuery('SELECT * FROM Journeys ORDER BY journey_id DESC LIMIT 15;')">Reset</button>
+                        </div>
+                    </div>
+                    <textarea id="sql-input" spellcheck="false" placeholder="Enter standard SQL (SELECT, JOIN, GROUP BY, UPDATE)...">SELECT * FROM Journeys ORDER BY journey_id DESC LIMIT 20;</textarea>
+                </div>
+
+                <!-- Control Row -->
+                <div class="control-row">
+                    <button class="btn-execute" id="btn-run" onclick="runQuery()">
+                        Execute Query ⚡
+                    </button>
+                    <span class="hint-text">Press <strong>Ctrl + Enter</strong> to execute</span>
+                </div>
+
+                <!-- Execution Status -->
+                <div id="status-container" style="display: none;"></div>
+
+                <div id="execution-plan" style="display:none"></div>
+
+                <!-- Results Table -->
+                <div class="results-box" id="results-box" style="display: none;">
+                    <table class="result-table" id="result-table">
+                        <thead id="result-thead"></thead>
+                        <tbody id="result-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PRESETS = {
+            federatedRevenue: `SELECT region, COUNT(*) AS trips, SUM(deducted_amount) AS revenue FROM Journeys GROUP BY region;`,
+            predicatePruning: `SELECT * FROM Journeys WHERE region='CHENNAI' LIMIT 15;`,
+            scatterGather: `SELECT * FROM Journeys ORDER BY journey_id DESC LIMIT 20;`,
+            reconciliation: `SELECT payment_status, COUNT(*) AS total_journeys, SUM(deducted_amount) AS total_revenue_inr
+FROM Journeys
+GROUP BY payment_status;`,
+
+            balances: `SELECT u.user_id, u.full_name, u.phone_number, w.current_balance, COUNT(v.registration_no) AS vehicles_registered
+FROM Users u
+JOIN Wallet_Ledgers w ON u.user_id = w.user_id
+LEFT JOIN Vehicles v ON u.user_id = v.user_id
+GROUP BY u.user_id;`,
+
+            plazas: `SELECT p.plaza_name, p.highway_name, p.base_toll_rate, COUNT(j.journey_id) AS trips_recorded, SUM(j.deducted_amount) AS total_revenue
+FROM Toll_Plazas p
+LEFT JOIN Journeys j ON p.plaza_id = j.plaza_id
+GROUP BY p.plaza_id
+ORDER BY total_revenue DESC;`,
+
+            failed: `SELECT j.journey_id, j.timestamp, j.tag_id, t.status AS tag_status, j.payment_status, j.failure_reason
+FROM Journeys j
+JOIN RFID_Tags t ON j.tag_id = t.tag_id
+WHERE j.payment_status = 'FAILED'
+ORDER BY j.journey_id DESC;`,
+
+            audit: `SELECT j.journey_id, u.full_name AS vehicle_owner, v.registration_no, j.tag_id, p.plaza_name, j.deducted_amount, j.payment_status, j.timestamp
+FROM Journeys j
+JOIN RFID_Tags t ON j.tag_id = t.tag_id
+JOIN Vehicles v ON t.registration_no = v.registration_no
+JOIN Users u ON v.user_id = u.user_id
+JOIN Toll_Plazas p ON j.plaza_id = p.plaza_id
+ORDER BY j.journey_id DESC
+LIMIT 25;`
+        };
+
+        const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        function renderExecutionPlan(plan, overallLatency) {
+            const box = document.getElementById('execution-plan');
+            if (!plan) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const pill = (value, pruned = false) => `<span class="dqp-pill${pruned ? ' pruned' : ''}">${esc(value)}</span>`;
+            const latencies = plan.node_latencies_ms || (overallLatency != null && (plan.active_nodes || []).length ? {[plan.active_nodes[0]]: overallLatency} : {});
+            box.innerHTML = `<div class="dqp-card">
+                <h3>Distributed Execution Plan (DQP) <span class="dqp-pill">${esc(plan.strategy || 'Distributed execution')}</span></h3>
+                <strong>Active Nodes</strong><div class="dqp-list">${(plan.active_nodes || []).map(n => pill(n)).join('') || pill('None')}</div>
+                <strong>Pruned Nodes</strong><div class="dqp-list">${(plan.pruned_nodes || []).map(n => pill(n, true)).join('') || pill('None')}</div>
+                <strong>Pipeline</strong>${(plan.steps || []).map(step => `<div class="dqp-step"><strong>Phase ${esc(step.step)} · ${esc(step.phase)}</strong> — ${esc(step.detail)}</div>`).join('')}
+                ${Object.keys(latencies).length ? `<strong style="display:block;margin-top:12px">Node Latency Breakdown</strong><div class="dqp-list">${Object.entries(latencies).map(([node, latency]) => pill(`${node}: ${latency}ms`)).join('')}</div>` : ''}
+            </div>`;
+            box.style.display = 'block';
+        }
+
+        function setQuery(sql) {
+            document.getElementById('sql-input').value = sql.trim();
+            runQuery();
+        }
+
+        function loadPreset(key) {
+            if (PRESETS[key]) {
+                document.getElementById('sql-input').value = PRESETS[key];
+                runQuery();
+            }
+        }
+
+        function clearEditor() {
+            document.getElementById('sql-input').value = '';
+            document.getElementById('sql-input').focus();
+        }
+
+        // Keyboard Shortcut: Ctrl+Enter or Cmd+Enter to execute
+        document.getElementById('sql-input').addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runQuery();
+            }
+        });
+
+        async function runQuery() {
+            const query = document.getElementById('sql-input').value.trim();
+            if (!query) return;
+
+            const btn = document.getElementById('btn-run');
+            btn.innerText = "Executing...";
+            btn.disabled = true;
+
+            const statusBox = document.getElementById('status-container');
+            const resultsBox = document.getElementById('results-box');
+            const thead = document.getElementById('result-thead');
+            const tbody = document.getElementById('result-tbody');
+
+            try {
+                const targetNode = document.getElementById('target-node').value;
+                const res = await fetch('/api/ddbms/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, target: targetNode })
+                });
+                const data = await res.json();
+
+                statusBox.style.display = 'block';
+
+                if (!data.success) {
+                    renderExecutionPlan(null);
+                    statusBox.innerHTML = `
+                        <div class="status-badge status-error">
+                            ❌ Error: ${esc(data.error)} (${esc(data.execution_time_ms ?? data.latency_ms ?? 0)} ms)
+                        </div>
+                    `;
+                    resultsBox.style.display = 'none';
+                } else if (data.type === 'SELECT' || Array.isArray(data.columns)) {
+                    renderExecutionPlan(data.execution_plan, data.execution_time_ms ?? data.latency_ms);
+                    statusBox.innerHTML = `
+                        <div class="status-badge status-success">
+                            ✓ Query executed in <strong>${data.execution_time_ms ?? data.latency_ms ?? 0} ms</strong> &bull; <strong>${data.row_count ?? data.count ?? (data.rows || []).length} rows</strong> returned
+                        </div>
+                    `;
+                    
+                    // Render Table Headers
+                    thead.innerHTML = `<tr>${(data.columns || []).map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
+
+                    // Render Rows
+                    const resultRows = data.rows || [];
+                    if (resultRows.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="${(data.columns || []).length || 1}" style="text-align:center; color:#888;">(0 rows returned)</td></tr>`;
+                    } else {
+                        tbody.innerHTML = resultRows.map(row => {
+                            return `<tr>${row.map(val => `<td>${val === null ? '<em style="color:#aaa;">NULL</em>' : esc(val)}</td>`).join('')}</tr>`;
+                        }).join('');
+                    }
+
+                    resultsBox.style.display = 'block';
+                } else {
+                    renderExecutionPlan(data.execution_plan, data.execution_time_ms ?? data.latency_ms);
+                    // DML execution (INSERT/UPDATE/DELETE)
+                    statusBox.innerHTML = `
+                        <div class="status-badge status-success">
+                            ✓ ${data.message} (${data.execution_time_ms} ms)
+                        </div>
+                    `;
+                    resultsBox.style.display = 'none';
+                    fetchSchema(); // Refresh row counts
+                }
+            } catch (err) {
+                statusBox.style.display = 'block';
+                statusBox.innerHTML = `<div class="status-badge status-error">Network error: ${err}</div>`;
+                resultsBox.style.display = 'none';
+            } finally {
+                btn.innerText = "Execute Query ⚡";
+                btn.disabled = false;
+            }
+        }
+
+        async function fetchSchema() {
+            try {
+                const res = await fetch('/api/sql/schema');
+                const schema = await res.json();
+                const container = document.getElementById('schema-container');
+                container.innerHTML = Object.entries(schema).map(([name, info]) => `
+                    <div class="table-item">
+                        <div class="table-item-header" onclick="setQuery('SELECT * FROM ${name} LIMIT 25;')">
+                            <span>${name}</span>
+                            <span class="table-badge-cnt">${info.count} rows</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error("Schema fetch error:", e);
+            }
+        }
+
+        // Run default query on load
+        window.addEventListener('DOMContentLoaded', () => {
+            runQuery();
+        });
+    </script>
+</body>
+</html>

@@ -9,6 +9,8 @@ import os
 import re
 import sqlite3
 from datetime import datetime, timezone
+from werkzeug.security import generate_password_hash, check_password_hash
+from plaza_data import CITIES, ALL_PLAZA_ROWS, PLAZA_NAME_TO_CITY, PLAZA_ID_TO_CITY
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "fastag_ledger.db")
 
@@ -36,7 +38,7 @@ def init_db(reset: bool = False):
     CREATE TABLE IF NOT EXISTS Users (
         user_id       INTEGER PRIMARY KEY AUTOINCREMENT,
         username      VARCHAR(50) UNIQUE NOT NULL,
-        password      VARCHAR(100) NOT NULL,
+        password      VARCHAR(255) NOT NULL,
         full_name     VARCHAR(100) NOT NULL,
         phone_number  VARCHAR(15) UNIQUE NOT NULL,
         created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -75,13 +77,14 @@ def init_db(reset: bool = False):
     );
     """)
 
-    # Table 5: Toll_Plazas
+    # Table 5: Toll_Plazas (Task 4.3: Added region column)
     cur.execute("""
     CREATE TABLE IF NOT EXISTS Toll_Plazas (
         plaza_id       INTEGER PRIMARY KEY,
         plaza_name     VARCHAR(100) UNIQUE NOT NULL,
         highway_name   VARCHAR(50) NOT NULL,
-        base_toll_rate DECIMAL(8,2) NOT NULL
+        base_toll_rate DECIMAL(8,2) NOT NULL,
+        region         VARCHAR(30) NOT NULL DEFAULT 'DELHI'
     );
     """)
 
@@ -113,6 +116,23 @@ def init_db(reset: bool = False):
     if cur.fetchone()["cnt"] == 0:
         _seed_default_data(cur)
         conn.commit()
+    else:
+        # Migrate any unhashed passwords
+        cur.execute("SELECT user_id, password FROM Users;")
+        unhashed = [(u["user_id"], u["password"]) for u in cur.fetchall() if not u["password"].startswith(("scrypt:", "pbkdf2:"))]
+        for uid, plain in unhashed:
+            cur.execute("UPDATE Users SET password = ? WHERE user_id = ?;", (generate_password_hash(plain), uid))
+        if unhashed:
+            conn.commit()
+
+        # Migrate Toll_Plazas to ensure region column exists (Task 4.3)
+        cur.execute("PRAGMA table_info(Toll_Plazas);")
+        col_names = [col["name"] for col in cur.fetchall()]
+        if "region" not in col_names:
+            cur.execute("ALTER TABLE Toll_Plazas ADD COLUMN region VARCHAR(30) NOT NULL DEFAULT 'DELHI';")
+            for pid, pname, hwy, rate, reg in ALL_PLAZA_ROWS:
+                cur.execute("UPDATE Toll_Plazas SET region = ? WHERE plaza_id = ?;", (reg, pid))
+            conn.commit()
 
     conn.close()
 
@@ -127,16 +147,16 @@ def _seed_default_data(cur):
     """Populates 10 owners, their 30 cars/tags across classes, and 30 toll plazas."""
     # 1. 10 Users
     users = [
-        (1,  "ravi",   "ravi123",   "Ravi Kumar",   "+91-9876543210"),
-        (2,  "priya",  "priya123",  "Priya Sharma", "+91-9812345678"),
-        (3,  "amit",   "amit123",   "Amit Patel",   "+91-9900112233"),
-        (4,  "sneha",  "sneha123",  "Sneha Reddy",  "+91-9988776655"),
-        (5,  "vikram", "vikram123", "Vikram Singh", "+91-9871234567"),
-        (6,  "ananya", "ananya123", "Ananya Das",   "+91-9865432100"),
-        (7,  "rohan",  "rohan123",  "Rohan Mehta",  "+91-9823456789"),
-        (8,  "kavita", "kavita123", "Kavita Joshi", "+91-9845678901"),
-        (9,  "arjun",  "arjun123",  "Arjun Nair",   "+91-9867890123"),
-        (10, "meera",  "meera123",  "Meera Iyer",   "+91-9889012345"),
+        (1,  "ravi",   generate_password_hash("ravi123"),   "Ravi Kumar",   "+91-9876543210"),
+        (2,  "priya",  generate_password_hash("priya123"),  "Priya Sharma", "+91-9812345678"),
+        (3,  "amit",   generate_password_hash("amit123"),   "Amit Patel",   "+91-9900112233"),
+        (4,  "sneha",  generate_password_hash("sneha123"),  "Sneha Reddy",  "+91-9988776655"),
+        (5,  "vikram", generate_password_hash("vikram123"), "Vikram Singh", "+91-9871234567"),
+        (6,  "ananya", generate_password_hash("ananya123"), "Ananya Das",   "+91-9865432100"),
+        (7,  "rohan",  generate_password_hash("rohan123"),  "Rohan Mehta",  "+91-9823456789"),
+        (8,  "kavita", generate_password_hash("kavita123"), "Kavita Joshi", "+91-9845678901"),
+        (9,  "arjun",  generate_password_hash("arjun123"),  "Arjun Nair",   "+91-9867890123"),
+        (10, "meera",  generate_password_hash("meera123"),  "Meera Iyer",   "+91-9889012345"),
     ]
     cur.executemany("INSERT INTO Users (user_id, username, password, full_name, phone_number) VALUES (?, ?, ?, ?, ?);", users)
 
@@ -236,50 +256,8 @@ def _seed_default_data(cur):
     ]
     cur.executemany("INSERT INTO RFID_Tags (tag_id, registration_no, status, issued_date) VALUES (?, ?, ?, ?);", tags)
 
-    # 5. 30 Toll Plazas across 10 Cities
-    plazas = [
-        # New Delhi (201-203)
-        (201, "Place1Delhi",      "NH-44",                  95.00),
-        (202, "Place2Delhi",      "Delhi-Meerut Expy",      85.00),
-        (203, "Place3Delhi",      "NH-48",                 105.00),
-        # Kolkata (204-206)
-        (204, "Place1Kolkata",    "NH-16",                  70.00),
-        (205, "Place2Kolkata",    "NH-19",                  80.00),
-        (206, "Place3Kolkata",    "Kolkata-Durgapur Expy",  90.00),
-        # Mumbai (207-209)
-        (207, "Place1Mumbai",     "Mumbai-Pune Expy",      120.00),
-        (208, "Place2Mumbai",     "Eastern Freeway",        80.00),
-        (209, "Place3Mumbai",     "Bandra-Worli Sealink",   95.00),
-        # Bengaluru (210-212)
-        (210, "Place1Bengaluru",  "NICE Road",              85.00),
-        (211, "Place2Bengaluru",  "NH-44 South",            75.00),
-        (212, "Place3Bengaluru",  "Bengaluru-Mysuru Expy", 110.00),
-        # Chennai (213-215)
-        (213, "Place1Chennai",    "Grand Southern Trunk",   75.00),
-        (214, "Place2Chennai",    "OMR IT Corridor",        65.00),
-        (215, "Place3Chennai",    "NH-16 East",             90.00),
-        # Hyderabad (216-218)
-        (216, "Place1Hyderabad",  "ORR Hyderabad",          60.00),
-        (217, "Place2Hyderabad",  "NH-65",                  85.00),
-        (218, "Place3Hyderabad",  "Hyderabad-Vijayawada",  100.00),
-        # Ahmedabad (219-221)
-        (219, "Place1Ahmedabad",  "NH-48 West",             70.00),
-        (220, "Place2Ahmedabad",  "Ahmedabad-Vadodara Expy", 95.00),
-        (221, "Place3Ahmedabad",  "SG Highway",             55.00),
-        # Surat (222-224)
-        (222, "Place1Surat",      "NH-48 Surat",            65.00),
-        (223, "Place2Surat",      "Diamond Bridge Expy",    75.00),
-        (224, "Place3Surat",      "Surat-Hazira Road",      60.00),
-        # Pune (225-227)
-        (225, "Place1Pune",       "NH-48 Pune",             90.00),
-        (226, "Place2Pune",       "Pune-Satara NH",         80.00),
-        (227, "Place3Pune",       "Pune-Bengaluru Expy",   105.00),
-        # Jaipur (228-230)
-        (228, "Place1Jaipur",     "Delhi-Jaipur Expy",     100.00),
-        (229, "Place2Jaipur",     "NH-48 Jaipur",           85.00),
-        (230, "Place3Jaipur",     "Jaipur Ring Road",       60.00),
-    ]
-    cur.executemany("INSERT INTO Toll_Plazas (plaza_id, plaza_name, highway_name, base_toll_rate) VALUES (?, ?, ?, ?);", plazas)
+    # 5. 30 Toll Plazas across 10 Cities (Task 4.1: Unified Source of Truth)
+    cur.executemany("INSERT INTO Toll_Plazas (plaza_id, plaza_name, highway_name, base_toll_rate, region) VALUES (?, ?, ?, ?, ?);", ALL_PLAZA_ROWS)
 
 def process_toll_batch(tag_id: str, plaza_ref: str, timestamp_str: str = None) -> dict:
     """
@@ -296,17 +274,17 @@ def process_toll_batch(tag_id: str, plaza_ref: str, timestamp_str: str = None) -
         conn.execute("BEGIN IMMEDIATE;")
         cur = conn.cursor()
 
-        # Step 1: Look up Plaza (by ID or by name)
-        cur.execute("SELECT plaza_id, plaza_name, base_toll_rate FROM Toll_Plazas WHERE plaza_id = ? OR plaza_name = ?;", (plaza_ref, plaza_ref))
+        # Step 1: Look up Plaza (by ID or by name) - Task 4.3 selects region
+        cur.execute("SELECT plaza_id, plaza_name, base_toll_rate, region FROM Toll_Plazas WHERE plaza_id = ? OR plaza_name = ?;", (plaza_ref, plaza_ref))
         plaza_row = cur.fetchone()
         if not plaza_row:
-            plaza_id = 201
-            plaza_name = "Place1Delhi"
-            base_toll_rate = 95.00
-        else:
-            plaza_id = plaza_row["plaza_id"]
-            plaza_name = plaza_row["plaza_name"]
-            base_toll_rate = float(plaza_row["base_toll_rate"])
+            conn.commit()
+            return {"status": "SKIPPED", "reason": f"Unknown plaza: {plaza_ref}"}
+
+        plaza_id = plaza_row["plaza_id"]
+        plaza_name = plaza_row["plaza_name"]
+        base_toll_rate = float(plaza_row["base_toll_rate"])
+        plaza_region = plaza_row["region"]
 
         # Step 2: Look up Tag, Vehicle, Owner, and Wallet
         cur.execute("""
@@ -369,9 +347,9 @@ def process_toll_batch(tag_id: str, plaza_ref: str, timestamp_str: str = None) -
                 "reason": f"RFID Tag is {tag_status}"
             }
 
-        # Task 6: Spatiotemporal Fraud Detection ("Impossible Travel" / Cloned Tag Alert)
+        # Task 6 & Task 4.3: Spatiotemporal Fraud Detection ("Impossible Travel" via region column)
         cur.execute("""
-            SELECT p.plaza_name, j.timestamp
+            SELECT p.plaza_name, p.region, j.timestamp
             FROM Journeys j
             JOIN Toll_Plazas p ON j.plaza_id = p.plaza_id
             WHERE j.tag_id = ? AND j.payment_status = 'SUCCESS'
@@ -381,19 +359,12 @@ def process_toll_batch(tag_id: str, plaza_ref: str, timestamp_str: str = None) -
         last_journey = cur.fetchone()
 
         if last_journey:
-            last_plaza = last_journey["plaza_name"]
-            last_time_str = last_journey["timestamp"]
-
-            def extract_city(pname):
-                m = re.search(r'Place\d+(.*)', pname)
-                return m.group(1) if m else pname
-
-            current_city = extract_city(plaza_name)
-            last_city = extract_city(last_plaza)
+            last_city = last_journey["region"]
+            current_city = plaza_region
 
             if current_city != last_city:
                 try:
-                    last_time = datetime.fromisoformat(last_time_str)
+                    last_time = datetime.fromisoformat(last_journey["timestamp"])
                     curr_time = datetime.fromisoformat(timestamp_str) if timestamp_str else datetime.now(timezone.utc)
                     gap_hours = abs((curr_time - last_time).total_seconds()) / 3600.0
 
@@ -469,22 +440,6 @@ def process_toll_batch(tag_id: str, plaza_ref: str, timestamp_str: str = None) -
     finally:
         conn.close()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# City / Regional Station Configurations
-# ─────────────────────────────────────────────────────────────────────────────
-CITIES = {
-    "DELHI":      {"name": "New Delhi",  "plazas": ["Place1Delhi", "Place2Delhi", "Place3Delhi"],          "highway": "NH-44 / Delhi-Meerut Expy"},
-    "KOLKATA":    {"name": "Kolkata",    "plazas": ["Place1Kolkata", "Place2Kolkata", "Place3Kolkata"],      "highway": "NH-16 / NH-19 / Durgapur Expy"},
-    "MUMBAI":     {"name": "Mumbai",     "plazas": ["Place1Mumbai", "Place2Mumbai", "Place3Mumbai"],        "highway": "Mumbai-Pune Expy / Sea Link"},
-    "BENGALURU":  {"name": "Bengaluru",  "plazas": ["Place1Bengaluru", "Place2Bengaluru", "Place3Bengaluru"],"highway": "NICE Road / Mysuru Expy"},
-    "CHENNAI":    {"name": "Chennai",    "plazas": ["Place1Chennai", "Place2Chennai", "Place3Chennai"],      "highway": "OMR / GST Road / NH-16"},
-    "HYDERABAD":  {"name": "Hyderabad",  "plazas": ["Place1Hyderabad", "Place2Hyderabad", "Place3Hyderabad"],"highway": "ORR / NH-65"},
-    "AHMEDABAD":  {"name": "Ahmedabad",  "plazas": ["Place1Ahmedabad", "Place2Ahmedabad", "Place3Ahmedabad"],"highway": "NH-48 West / SG Highway"},
-    "SURAT":      {"name": "Surat",      "plazas": ["Place1Surat", "Place2Surat", "Place3Surat"],          "highway": "NH-48 Surat / Diamond Bridge"},
-    "PUNE":       {"name": "Pune",       "plazas": ["Place1Pune", "Place2Pune", "Place3Pune"],              "highway": "NH-48 Pune / Satara NH"},
-    "JAIPUR":     {"name": "Jaipur",     "plazas": ["Place1Jaipur", "Place2Jaipur", "Place3Jaipur"],        "highway": "Delhi-Jaipur Expy / Ring Road"},
-}
-
 def authenticate_account(username: str, password: str):
     """
     Unified multi-tier authentication:
@@ -523,13 +478,25 @@ def authenticate_account(username: str, password: str):
     return None
 
 def authenticate_user(username: str, password: str):
-    """Verifies user credentials."""
+    """Verifies user credentials using secure password hashing."""
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("SELECT user_id, username, full_name, phone_number FROM Users WHERE LOWER(username) = LOWER(?) AND password = ?;", (username, password))
+    cur.execute("SELECT user_id, username, password, full_name, phone_number FROM Users WHERE LOWER(username) = LOWER(?);", (username,))
     user = cur.fetchone()
     conn.close()
-    return dict(user) if user else None
+    if user:
+        stored_hash = user["password"]
+        is_valid = False
+        if stored_hash.startswith(("scrypt:", "pbkdf2:")):
+            is_valid = check_password_hash(stored_hash, password)
+        elif stored_hash == password:
+            is_valid = True
+
+        if is_valid:
+            user_dict = dict(user)
+            user_dict.pop("password", None)
+            return user_dict
+    return None
 
 def get_city_dashboard_data(city_name: str) -> dict:
     """Fetches local regional database info, plazas, and transactions for a specific city."""
@@ -708,6 +675,19 @@ def execute_raw_query(query_str: str) -> dict:
         }
 
     conn = get_connection()
+    # Task 2.5: Enforce SQLite engine-level read-only authorizer
+    allowed_actions = {
+        sqlite3.SQLITE_SELECT,
+        sqlite3.SQLITE_READ,
+        sqlite3.SQLITE_FUNCTION,
+        sqlite3.SQLITE_PRAGMA,
+    }
+    def _read_only_authorizer(action, arg1, arg2, dbname, trigger):
+        if action in allowed_actions:
+            return sqlite3.SQLITE_OK
+        return sqlite3.SQLITE_DENY
+
+    conn.set_authorizer(_read_only_authorizer)
     try:
         cur = conn.cursor()
         cur.execute(query_clean)
@@ -763,3 +743,40 @@ def get_schema_info() -> dict:
         schema[tbl] = {"columns": cols, "count": count}
     conn.close()
     return schema
+
+def toggle_rfid_tag_status(user_id: int, tag_id: str) -> dict:
+    """Toggles RFID tag status between ACTIVE and BLOCKED for a vehicle owner or admin (Task 6.3)."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT t.tag_id, t.status, v.user_id
+        FROM RFID_Tags t
+        JOIN Vehicles v ON t.registration_no = v.registration_no
+        WHERE t.tag_id = ?;
+    """, (tag_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return {"success": False, "error": f"Tag {tag_id} not found."}
+
+    if user_id and row["user_id"] != user_id:
+        conn.close()
+        return {"success": False, "error": "Unauthorized: Tag does not belong to you."}
+
+    new_status = "BLOCKED" if row["status"] == "ACTIVE" else "ACTIVE"
+    cur.execute("UPDATE RFID_Tags SET status = ? WHERE tag_id = ?;", (new_status, tag_id))
+    conn.commit()
+    conn.close()
+
+    # Sync local DDBMS edge cache
+    try:
+        import ddbms_manager
+        for city_k in ddbms_manager.CITIES_METADATA:
+            cconn = ddbms_manager.get_node_connection(city_k)
+            cconn.execute("UPDATE Edge_Tags_Cache SET status = ? WHERE tag_id = ?;", (new_status, tag_id))
+            cconn.commit()
+            cconn.close()
+    except Exception:
+        pass
+
+    return {"success": True, "tag_id": tag_id, "new_status": new_status}

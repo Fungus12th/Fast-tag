@@ -4,12 +4,13 @@ Central hub: serves the dashboard, exposes REST APIs for ingestion, stats, chaos
 and deduplication control.
 """
 
+import os
 import json
 import time
 import threading
 from datetime import datetime, timezone
 
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 
 import config
 import sql_ledger
@@ -17,7 +18,7 @@ from db import create_storage
 from deduplicator import BatchDeduplicator
 
 app = Flask(__name__)
-app.secret_key = "fastag-secret-key-3nf-acid"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(32).hex())
 
 # Initialize 3NF SQL Financial Ledger database (SQLite zero-bloat)
 sql_ledger.init_db()
@@ -296,6 +297,12 @@ def api_batch_summary():
 @app.route("/api/portal/<username>/history")
 def user_history(username):
     """API returning live SQL ledger data for the user."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    if user.get("role") == "user" and user.get("username", "").lower() != username.lower():
+        return jsonify({"error": "Forbidden: Cannot access another user's data"}), 403
+
     data = sql_ledger.get_user_dashboard_data(username)
     if not data:
         return jsonify({"data": [], "wallet": {"current_balance": 0.0}})
@@ -309,18 +316,109 @@ def user_history(username):
 @app.route("/api/wallet/recharge", methods=["POST"])
 def recharge_wallet_api():
     """Atomically adds funds to user wallet."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "User not authenticated"}), 401
+
     payload = request.get_json(silent=True) or request.form
-    user_id = payload.get("user_id") or session.get("user_id")
+    target_user_id = payload.get("user_id")
+
+    # Enforce ownership: normal users can only recharge their own wallet
+    if user.get("role") != "admin":
+        user_id = user.get("user_id")
+    else:
+        user_id = target_user_id or user.get("user_id")
+
     try:
         amount = float(payload.get("amount", 500.0))
+        if amount <= 0:
+            return jsonify({"error": "Invalid recharge amount: must be positive"}), 400
     except (TypeError, ValueError):
-        amount = 500.0
+        return jsonify({"error": "Invalid recharge amount"}), 400
 
     if not user_id:
         return jsonify({"error": "User not authenticated"}), 401
 
     new_balance = sql_ledger.recharge_wallet(int(user_id), amount)
     return jsonify({"success": True, "new_balance": new_balance})
+
+@app.route("/api/portal/<username>/export")
+def export_user_statement(username):
+    """Exports transaction statement as CSV for an owner (Task 6.2)."""
+    user = get_current_user()
+    if not user:
+        return redirect("/")
+    if user.get("role") == "user" and user.get("username", "").lower() != username.lower():
+        return jsonify({"error": "Forbidden"}), 403
+
+    data = sql_ledger.get_user_dashboard_data(username)
+    if not data:
+        return jsonify({"error": "User not found"}), 404
+
+    import csv
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Journey ID", "Timestamp", "Tag ID", "Plaza", "Highway", "Deducted (INR)", "Status", "Failure Reason"])
+    for j in data.get("journeys", []):
+        writer.writerow([
+            j.get("journey_id"),
+            j.get("timestamp"),
+            j.get("tag_id"),
+            j.get("plaza_name"),
+            j.get("highway_name"),
+            f"{j.get('deducted_amount', 0):.2f}",
+            j.get("payment_status"),
+            j.get("failure_reason") or ""
+        ])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=FASTag_Statement_{username}.csv"}
+    )
+
+@app.route("/api/tag/toggle", methods=["POST"])
+def toggle_tag_api():
+    """Toggles RFID tag between ACTIVE and BLOCKED (Task 6.3)."""
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or request.form
+    tag_id = payload.get("tag_id")
+    if not tag_id:
+        return jsonify({"error": "Missing tag_id"}), 400
+
+    user_id = user.get("user_id") if user.get("role") != "admin" else None
+    result = sql_ledger.toggle_rfid_tag_status(user_id, tag_id)
+    return jsonify(result), (200 if result.get("success") else 400)
+
+@app.route("/api/stream")
+def sse_stats_stream():
+    """Server-Sent Events (SSE) streaming live telemetry stats (Task 3.6)."""
+    def event_stream():
+        while True:
+            try:
+                dedup_results = dedup_worker.get_results()
+                with chaos_lock:
+                    chaos_active = chaos_state["active"]
+                payload = {
+                    "total_raw_pings": storage.get_total_ingested(),
+                    "total_deduplicated_journeys": dedup_results["total_journeys"],
+                    "dedup_ratio": dedup_results["last_dedup_ratio"],
+                    "pings_per_second": storage.get_throughput_pps(),
+                    "chaos_mode": chaos_active,
+                    "last_dedup_run": dedup_results["last_run_at"],
+                    "last_raw_count": dedup_results["last_raw_count"],
+                    "last_journey_count": dedup_results["last_journey_count"],
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+            except Exception:
+                pass
+            time.sleep(0.5)
+
+    return Response(event_stream(), mimetype="text/event-stream")
 
 @app.route("/sql_ledger")
 def sql_ledger_view():
@@ -347,7 +445,10 @@ def sql_console_view():
 
 @app.route("/api/sql/execute", methods=["POST"])
 def api_sql_execute():
-    """Execute arbitrary SQL queries against the global database."""
+    """Execute arbitrary SQL queries against the global database (Admin Only)."""
+    user = get_current_user()
+    if not user or user.get("role") != "admin":
+        return jsonify({"success": False, "error": "Unauthorized: Admin access required."}), 403
     payload = request.get_json(silent=True) or request.form
     query_str = payload.get("query", "").strip()
     result = sql_ledger.execute_raw_query(query_str)

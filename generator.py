@@ -40,20 +40,9 @@ except ImportError:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Plaza Registry (must match templates/index.html KNOWN_PLAZAS)
+# Plaza Registry (Task 4.1: Single source of truth from plaza_data.py)
 # ─────────────────────────────────────────────────────────────────────────────
-PLAZA_REGISTRY = {
-    "DELHI":      ["Place1Delhi", "Place2Delhi", "Place3Delhi"],
-    "KOLKATA":    ["Place1Kolkata", "Place2Kolkata", "Place3Kolkata"],
-    "MUMBAI":     ["Place1Mumbai", "Place2Mumbai", "Place3Mumbai"],
-    "BENGALURU":  ["Place1Bengaluru", "Place2Bengaluru", "Place3Bengaluru"],
-    "CHENNAI":    ["Place1Chennai", "Place2Chennai", "Place3Chennai"],
-    "HYDERABAD":  ["Place1Hyderabad", "Place2Hyderabad", "Place3Hyderabad"],
-    "AHMEDABAD":  ["Place1Ahmedabad", "Place2Ahmedabad", "Place3Ahmedabad"],
-    "SURAT":      ["Place1Surat", "Place2Surat", "Place3Surat"],
-    "PUNE":       ["Place1Pune", "Place2Pune", "Place3Pune"],
-    "JAIPUR":     ["Place1Jaipur", "Place2Jaipur", "Place3Jaipur"],
-}
+from plaza_data import PLAZA_REGISTRY
 
 LANE_IDS = ["LANE_1", "LANE_2", "LANE_3", "LANE_4"]
 
@@ -89,12 +78,17 @@ class C:
 # Tag Pool — generates a fixed pool of realistic tag IDs
 # ─────────────────────────────────────────────────────────────────────────────
 def generate_tag_pool(size: int = 200) -> list[str]:
-    """Create a pool of unique FASTag RFID tag IDs (now strictly 9 specific cars)."""
+    """Create a pool of unique FASTag RFID tag IDs."""
     try:
         from owners import ALL_CARS
-        return ALL_CARS
+        tags = list(ALL_CARS)
     except ImportError:
-        return [f"TAG_CAR_{i}" for i in range(1, 10)]
+        tags = [f"TAG_CAR_{i}" for i in range(1, 10)]
+
+    if size and size < len(tags):
+        import random
+        return random.sample(tags, size)
+    return tags
 
 
 # ─────────────────────────────────────────────────────────────────────────────

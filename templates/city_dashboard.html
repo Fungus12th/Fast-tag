@@ -4,11 +4,15 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ city.city_name }} Local Station Node</title>
   <link rel="stylesheet" href="/static/css/theme.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    .page{max-width:1440px;margin:auto;padding:20px}.brand{font-family:var(--font-display);font-weight:700;font-size:1.05rem}.city-title{margin:8px 0 20px}.city-title h1{font-family:var(--font-display);font-size:2rem}.muted{color:var(--text-muted)}.badge{padding:5px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:.75rem;font-weight:700}.online{color:var(--success);font-weight:700}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.metric strong{display:block;font:700 2rem var(--font-display);margin-top:8px}.section{margin-top:20px}.section h2{font:700 1.1rem var(--font-display);margin-bottom:10px}.tag-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.75rem;font-weight:700}.badge-success{background:var(--success-bg);color:#15803d}.badge-failed{background:var(--danger-bg);color:#b91c1c}.status-badge{display:inline-flex;padding:8px 14px;border-radius:var(--radius-pill);font-size:.85rem;font-weight:600;margin-bottom:14px}.status-success{background:var(--success-bg);color:#166534}.status-error{background:var(--danger-bg);color:#b91c1c}.empty{text-align:center;color:var(--text-muted)}.query-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.query-chip{padding:7px 10px;border:1px solid var(--primary);border-radius:999px;background:transparent;color:var(--primary);cursor:pointer;font-size:.78rem}.query-chip:hover{background:var(--primary);color:#fff}.node-editor{width:100%;min-height:120px;resize:vertical;background:var(--editor-bg);color:var(--editor-text);border:1px solid var(--editor-border);border-radius:var(--radius-sm);padding:14px;font:14px var(--font-mono);margin-bottom:12px}.query-result{margin-top:16px}.query-result .saas-table-container{max-height:360px;overflow:auto}.cache-note{margin-bottom:14px}@media(max-width:900px){.metrics{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.metrics{grid-template-columns:1fr}.page{padding:12px}.saas-nav{align-items:flex-start}}
+    .page{max-width:1440px;margin:auto;padding:20px}.brand{font-family:var(--font-display);font-weight:700;font-size:1.05rem}.city-title{margin:8px 0 20px}.city-title h1{font-family:var(--font-display);font-size:2rem}.muted{color:var(--text-muted)}.badge{padding:5px 10px;border-radius:999px;background:var(--primary-soft);color:var(--primary);font-size:.75rem;font-weight:700}.online{color:var(--success);font-weight:700}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.metric strong{display:block;font:700 2rem var(--font-display);margin-top:8px}.charts-grid{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:20px}.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm)}.chart-card h3{font:600 0.95rem var(--font-display);margin-bottom:12px;color:var(--text)}.section{margin-top:20px}.section h2{font:700 1.1rem var(--font-display);margin-bottom:10px}.tag-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:.75rem;font-weight:700}.badge-success{background:var(--success-bg);color:#15803d}.badge-failed{background:var(--danger-bg);color:#b91c1c}.status-badge{display:inline-flex;padding:8px 14px;border-radius:var(--radius-pill);font-size:.85rem;font-weight:600;margin-bottom:14px}.status-success{background:var(--success-bg);color:#166534}.status-error{background:var(--danger-bg);color:#b91c1c}.empty{text-align:center;color:var(--text-muted)}.query-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}.query-chip{padding:7px 10px;border:1px solid var(--primary);border-radius:999px;background:transparent;color:var(--primary);cursor:pointer;font-size:.78rem}.query-chip:hover{background:var(--primary);color:#fff}.node-editor{width:100%;min-height:120px;resize:vertical;background:var(--editor-bg);color:var(--editor-text);border:1px solid var(--editor-border);border-radius:var(--radius-sm);padding:14px;font:14px var(--font-mono);margin-bottom:12px}.query-result{margin-top:16px}.query-result .saas-table-container{max-height:360px;overflow:auto}.cache-note{margin-bottom:14px}@media(max-width:900px){.metrics,.charts-grid{grid-template-columns:1fr}}@media(max-width:600px){.metrics{grid-template-columns:1fr}.page{padding:12px}.saas-nav{align-items:flex-start}}
+    @keyframes toastSlide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
   </style>
 </head>
-<body><main class="page">
+<body>
+<div id="toast-container" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
+<main class="page">
   <nav class="saas-nav">
     <span class="brand">🚗 FASTag Local Station Node</span>
     <div class="saas-nav-links"><span class="badge">REGION: {{ city.city_key }}</span><span class="online">● Local DB Online</span><a class="saas-nav-link" href="/ddbms">🌐 DDBMS Architecture</a><a class="saas-btn saas-btn-danger" href="/logout">Sign Out</a></div>
@@ -20,6 +24,19 @@
     <div class="saas-card metric"><div class="saas-card-title">Local Toll Revenue</div><strong id="stat-revenue">₹{{ '%.2f'|format(city.stats.total_revenue) }}</strong></div>
     <div class="saas-card metric"><div class="saas-card-title">Successful vs Failed</div><strong id="stat-success-fail">{{ city.stats.successful_journeys }} / {{ city.stats.failed_journeys }}</strong></div>
   </section>
+
+  <!-- Regional Analytics Charts (Task 3.2) -->
+  <section class="charts-grid">
+    <div class="chart-card">
+      <h3>Outcome Distribution</h3>
+      <div style="height:220px;position:relative"><canvas id="outcome-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Revenue by Local Toll Plaza</h3>
+      <div style="height:220px;position:relative"><canvas id="plaza-rev-chart"></canvas></div>
+    </div>
+  </section>
+
   <section class="saas-card section">
     <h2>⚡ Local Node SQL Query Terminal</h2>
     <p class="muted" style="font-family:var(--font-mono);font-size:.82rem;margin-bottom:14px">NODE_{{ city.city_key }}_EDGE_01 · Physical Fragment: data/nodes/{{ city.city_key.lower() }}_node.db · σ(region='{{ city.city_key }}')</p>
@@ -45,6 +62,54 @@
 <script>
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rows=(id,html,span)=>document.getElementById(id).innerHTML=html||`<tr><td colspan="${span}" class="empty">No records yet</td></tr>`;
+
+// Toast Notification Manager (Task 3.5)
+const seenJourneys = new Set();
+let isInitialLoad = true;
+
+function showToast(msg, isAlert=true){
+  const c = document.getElementById('toast-container');
+  if(!c) return;
+  const t = document.createElement('div');
+  t.style.cssText = `background:${isAlert ? '#dc2626':'#0284c7'};color:#fff;padding:12px 18px;border-radius:8px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 16px rgba(0,0,0,0.25);animation:toastSlide 0.3s ease;pointer-events:auto;max-width:380px;`;
+  t.innerHTML = `⚠️ <strong>${isAlert ? 'Security/Operational Alert' : 'Station Notice'}:</strong><br>${esc(msg)}`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity 0.4s'; t.style.opacity='0'; setTimeout(()=>t.remove(), 400); }, 5000);
+}
+
+// Chart.js Instances (Task 3.2)
+let outcomeChart = null;
+let plazaChart = null;
+
+function initCharts(){
+  const ctxO = document.getElementById('outcome-chart');
+  const ctxP = document.getElementById('plaza-rev-chart');
+  if(!ctxO || !ctxP) return;
+
+  outcomeChart = new Chart(ctxO, {
+    type: 'doughnut',
+    data: {
+      labels: ['Successful', 'Failed'],
+      datasets: [{ data: [0, 0], backgroundColor: ['#16a34a', '#dc2626'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  plazaChart = new Chart(ctxP, {
+    type: 'bar',
+    data: {
+      labels: [],
+      datasets: [{ label: 'Revenue (₹)', data: [], backgroundColor: '#0284c7', borderRadius: 4 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
 const nodeQueries=[
  'SELECT * FROM Journeys_Local ORDER BY journey_id DESC LIMIT 15;',
  'SELECT * FROM Toll_Plazas_Local;',
@@ -62,6 +127,7 @@ async function runNodeQuery(){
 }
 document.getElementById('node-sql').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runNodeQuery()}});
 async function loadTagCache(){try{const r=await fetch('/api/city/{{ city.city_key.lower() }}/sql',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'SELECT * FROM Edge_Tags_Cache LIMIT 15;'})});const d=await r.json();if(!d.success)throw Error(d.error);document.getElementById('cache-head').innerHTML=`<tr>${(d.columns||[]).map(c=>`<th>${esc(c)}</th>`).join('')}</tr>`;document.getElementById('cache-body').innerHTML=(d.rows||[]).map(row=>`<tr>${row.map(v=>`<td>${v===null?'<em>NULL</em>':esc(v)}</td>`).join('')}</tr>`).join('')||'<tr><td class="empty">No cached tags found</td></tr>'}catch(e){document.getElementById('cache-body').innerHTML=`<tr><td class="empty">${esc(e.message)}</td></tr>`}}
+
 function render(d){
  if(!d)return;
  const stats=d.stats||{};
@@ -71,8 +137,54 @@ function render(d){
  document.getElementById('stat-journeys').textContent=(stats.total_journeys||0).toLocaleString();
  document.getElementById('stat-revenue').textContent='₹'+Number(stats.total_revenue||0).toFixed(2);
  document.getElementById('stat-success-fail').textContent=(stats.successful_journeys||0)+' / '+(stats.failed_journeys||0);
+ 
+ // Toast trigger for newly arriving failed / fraud journeys (Task 3.5)
+ journeys.forEach(j => {
+   if(j && j.journey_id && !seenJourneys.has(j.journey_id)){
+     seenJourneys.add(j.journey_id);
+     if(!isInitialLoad && j.payment_status === 'FAILED'){
+       showToast(`Toll passage failed for Tag ${j.tag_id} at ${j.plaza_name}: ${j.failure_reason || 'Transaction rejected'}`);
+     }
+   }
+ });
+ isInitialLoad = false;
+
+ // Update Charts (Task 3.2)
+ if(outcomeChart){
+   const succ = stats.successful_journeys || 0;
+   const fail = stats.failed_journeys || 0;
+   outcomeChart.data.datasets[0].data = [succ, fail];
+   outcomeChart.update();
+ }
+
+ if(plazaChart){
+   const revByPlaza = {};
+   journeys.forEach(j => {
+     if(j.payment_status === 'SUCCESS'){
+       const pname = j.plaza_name || 'Plaza';
+       revByPlaza[pname] = (revByPlaza[pname] || 0) + Number(j.deducted_amount || 0);
+     }
+   });
+   const labels = Object.keys(revByPlaza);
+   if(labels.length > 0){
+     plazaChart.data.labels = labels;
+     plazaChart.data.datasets[0].data = Object.values(revByPlaza);
+     plazaChart.update();
+   }
+ }
+
  rows('city-journeys-body',journeys.map(j=>`<tr><td>${esc(j.journey_id)}</td><td>${esc(j.timestamp)}</td><td>${esc(j.tag_id)}</td><td>${esc(j.registration_no)} &amp; ${esc(j.vehicle_class)}</td><td>${esc(j.plaza_name)}</td><td class="money">₹${Number(j.deducted_amount||0).toFixed(2)}</td><td><span class="tag-badge ${j.payment_status==='SUCCESS'?'badge-success':'badge-failed'}">${esc(j.payment_status)}</span></td></tr>`).join(''),7);
  rows('city-raw-body',pings.map(p=>`<tr><td>${esc(p.ping_id||p.id)}</td><td>${esc(p.ping_timestamp||p.timestamp)}</td><td>${esc(p.plaza_id||p.plaza_name)}</td><td>${esc(p.tag_id)}</td><td>${esc(p.rssi_signal_strength||p.rssi_dbm||p.rssi||'—')} dBm</td><td>${esc(p.lane_id||p.lane||'—')}</td></tr>`).join(''),6);
 }
-async function poll(){try{const r=await fetch('/api/city/{{ city.city_key.lower() }}/data');if(r.ok)render(await r.json())}catch(e){}};render({stats:{{ city.stats|tojson }},recent_journeys:{{ city.recent_journeys|tojson }},recent_raw_pings:{{ city.recent_raw_pings|tojson }}});poll();loadTagCache();setInterval(poll,2500);
+
+window.addEventListener('DOMContentLoaded', () => {
+  initCharts();
+  render({stats:{{ city.stats|tojson }},recent_journeys:{{ city.recent_journeys|tojson }},recent_raw_pings:{{ city.recent_raw_pings|tojson }}});
+  poll();
+  loadTagCache();
+  setInterval(poll,2500);
+});
+
+async function poll(){try{const r=await fetch('/api/city/{{ city.city_key.lower() }}/data');if(r.ok)render(await r.json())}catch(e){}};
+</script></body></html>
 </script></body></html>

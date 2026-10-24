@@ -46,6 +46,10 @@ class BatchDeduplicator:
         self._total_raw_processed = 0
         self._total_journeys = 0
 
+        # Task 4.2: Seen set for dedup-side idempotency filter
+        self._processed_seen = set()
+        self._last_seen_clear = time.time()
+
     # â”€â”€â”€ Public Interface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def is_running(self) -> bool:
@@ -163,7 +167,7 @@ class BatchDeduplicator:
                 f"({dedup_ratio}% duplicates filtered)"
             )
 
-            # Temp storage for the output
+            # Temp storage for the output (capped at latest 500 entries)
             try:
                 import json
                 import os
@@ -176,6 +180,8 @@ class BatchDeduplicator:
                         except json.JSONDecodeError:
                             pass
                 existing.extend(journeys)
+                if len(existing) > 500:
+                    existing = existing[-500:]
                 with open(out_file, "w") as f:
                     json.dump(existing, f, indent=4)
             except Exception as e:
@@ -184,8 +190,22 @@ class BatchDeduplicator:
             # Commit clean journeys to SQL Financial Ledger (Layer 3: ACID transactions)
             try:
                 import sql_ledger
+                # Task 4.2: Clear seen cache periodically or when it reaches 50K entries
+                if time.time() - self._last_seen_clear > 600 or len(self._processed_seen) > 50000:
+                    self._processed_seen.clear()
+                    self._last_seen_clear = time.time()
+
+                skipped_count = 0
                 for j in journeys:
+                    dedup_key = (j["tag_id"], j["plaza_id"], j.get("ping_timestamp"))
+                    if dedup_key in self._processed_seen:
+                        skipped_count += 1
+                        continue
+                    self._processed_seen.add(dedup_key)
                     sql_ledger.process_toll_batch(j["tag_id"], j["plaza_id"], j.get("ping_timestamp"))
+
+                if skipped_count > 0:
+                    print(f"[DEDUP -> SQL] Skipped {skipped_count} already-processed redundant journeys")
             except Exception as e:
                 print(f"[DEDUP -> SQL] Error committing to SQL ledger: {e}")
 

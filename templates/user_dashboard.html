@@ -295,9 +295,13 @@
                 <p style="font-size: 0.8rem; color: #666;">
                     Strict <code>CHECK (current_balance >= 0.00)</code> constraint enforced.
                 </p>
-                <div class="wallet-actions">
+                <div class="wallet-actions" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
                     <button class="btn-recharge" onclick="recharge(500)">+ Top Up ₹500</button>
                     <button class="btn-recharge" style="background:var(--primary-hover);" onclick="recharge(200)">+ Top Up ₹200</button>
+                    <div style="display: flex; gap: 6px; align-items: center; margin-left: auto;">
+                        <input type="number" id="custom-amount" min="50" max="10000" placeholder="Custom ₹" style="width: 105px; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem;">
+                        <button class="btn-recharge" style="background: #10b981;" onclick="rechargeCustom()">Top Up</button>
+                    </div>
                 </div>
             </div>
 
@@ -324,9 +328,11 @@
                             <td><code>{{ v.tag_id }}</code></td>
                             <td>
                                 {% if v.status == 'ACTIVE' %}
-                                <span class="tag-badge badge-active">ACTIVE</span>
+                                <span class="tag-badge badge-active" id="badge-{{ v.tag_id }}">ACTIVE</span>
+                                <button onclick="toggleTag('{{ v.tag_id }}')" style="margin-left: 6px; padding: 2px 7px; font-size: 0.72rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer;">Lock 🔒</button>
                                 {% else %}
-                                <span class="tag-badge badge-blocked">BLOCKED</span>
+                                <span class="tag-badge badge-blocked" id="badge-{{ v.tag_id }}">BLOCKED</span>
+                                <button onclick="toggleTag('{{ v.tag_id }}')" style="margin-left: 6px; padding: 2px 7px; font-size: 0.72rem; border-radius: 4px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer;">Unlock 🔓</button>
                                 {% endif %}
                             </td>
                         </tr>
@@ -338,17 +344,32 @@
 
         <!-- Journeys Ledger -->
         <div class="ledger-section">
-            <div class="ledger-header">
-                <div>
-                    <h2 class="ledger-title">Financial Transaction & Journey Ledger</h2>
-                    <p style="font-size: 0.85rem; color: #666; margin-top: 4px;">
-                        Immutable audit log of deduplicated toll events processed via <code>Process_Toll_Batch</code>.
-                    </p>
+            <div class="ledger-header" style="flex-direction: column; align-items: stretch; gap: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <h2 class="ledger-title">Financial Transaction & Journey Ledger</h2>
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 4px;">
+                            Immutable audit log of deduplicated toll events processed via <code>Process_Toll_Batch</code>.
+                        </p>
+                    </div>
+                    <div>
+                        <span id="trip-count" style="font-weight: bold; color: var(--primary);">
+                            {{ user_data.journeys|length }} records
+                        </span>
+                    </div>
                 </div>
-                <div>
-                    <span id="trip-count" style="font-weight: bold; color: var(--primary);">
-                        {{ user_data.journeys|length }} records
-                    </span>
+                <!-- Task 3.4 & Task 6.2 Filter and Export Bar -->
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #f8fafc; padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #475569;">Filter:</label>
+                    <select id="status-filter" onchange="renderFilteredJourneys()" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; background: white;">
+                        <option value="ALL">All Statuses</option>
+                        <option value="SUCCESS">Only SUCCESS</option>
+                        <option value="FAILED">Only FAILED</option>
+                    </select>
+                    <input type="text" id="search-filter" oninput="renderFilteredJourneys()" placeholder="Search tag or plaza..." style="padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.85rem; width: 190px;">
+                    <a href="/api/portal/{{ user_data.username }}/export" style="margin-left: auto; background: #334155; color: white; text-decoration: none; padding: 6px 14px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        📥 Download Statement (.CSV)
+                    </a>
                 </div>
             </div>
 
@@ -399,6 +420,54 @@
     <script>
         const USERNAME = "{{ user_data.username }}";
         const USER_ID = {{ user_data.user_id }};
+        let cachedJourneys = {{ user_data.journeys|tojson }};
+
+        function renderFilteredJourneys() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const searchTerm = (document.getElementById('search-filter').value || '').trim().toLowerCase();
+            const tbody = document.getElementById('journeys-body');
+
+            const filtered = cachedJourneys.filter(j => {
+                if (statusFilter !== 'ALL' && j.payment_status !== statusFilter) return false;
+                if (searchTerm) {
+                    const tag = (j.tag_id || '').toLowerCase();
+                    const plaza = (j.plaza_name || '').toLowerCase();
+                    const hway = (j.highway_name || '').toLowerCase();
+                    if (!tag.includes(searchTerm) && !plaza.includes(searchTerm) && !hway.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            document.getElementById('trip-count').innerText = `${filtered.length} of ${cachedJourneys.length} records`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888; padding: 24px;">No matching transactions found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(j => {
+                const isSuccess = j.payment_status === 'SUCCESS';
+                const timeClean = (j.timestamp || '').slice(0, 19).replace('T', ' ');
+                const failureHtml = j.failure_reason ? `<span class="failure-sub">${j.failure_reason}</span>` : '';
+                return `
+                    <tr>
+                        <td><code>#${j.journey_id}</code></td>
+                        <td>${timeClean}</td>
+                        <td><strong>${j.tag_id}</strong></td>
+                        <td>${j.plaza_name || 'Plaza ' + j.plaza_id} <span style="font-size: 0.8em; color: #666;">(${j.highway_name || ''})</span></td>
+                        <td><strong>₹${Number(j.deducted_amount || 0).toFixed(2)}</strong></td>
+                        <td>
+                            <span class="tag-badge ${isSuccess ? 'badge-success' : 'badge-failed'}">
+                                ${isSuccess ? '✓ SUCCESS' : '✗ FAILED'}
+                            </span>
+                            ${failureHtml}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
 
         // Live Poll every 2.5 seconds
         async function refreshData() {
@@ -412,33 +481,9 @@
                     document.getElementById('wallet-val').innerText = Number(json.wallet.current_balance).toFixed(2);
                 }
 
-                // Update journeys
-                const tbody = document.getElementById('journeys-body');
-                const list = json.data || [];
-                document.getElementById('trip-count').innerText = `${list.length} records`;
-
-                if (list.length > 0) {
-                    tbody.innerHTML = list.map(j => {
-                        const isSuccess = j.payment_status === 'SUCCESS';
-                        const timeClean = (j.timestamp || '').slice(0, 19).replace('T', ' ');
-                        const failureHtml = j.failure_reason ? `<span class="failure-sub">${j.failure_reason}</span>` : '';
-                        return `
-                            <tr>
-                                <td><code>#${j.journey_id}</code></td>
-                                <td>${timeClean}</td>
-                                <td><strong>${j.tag_id}</strong></td>
-                                <td>${j.plaza_name || 'Plaza ' + j.plaza_id} <span style="font-size: 0.8em; color: #666;">(${j.highway_name || ''})</span></td>
-                                <td><strong>₹${Number(j.deducted_amount || 0).toFixed(2)}</strong></td>
-                                <td>
-                                    <span class="tag-badge ${isSuccess ? 'badge-success' : 'badge-failed'}">
-                                        ${isSuccess ? '✓ SUCCESS' : '✗ FAILED'}
-                                    </span>
-                                    ${failureHtml}
-                                </td>
-                            </tr>
-                        `;
-                    }).join('');
-                }
+                // Update cached journeys and re-render
+                cachedJourneys = json.data || [];
+                renderFilteredJourneys();
             } catch (err) {
                 console.error("Poll error:", err);
             }
@@ -456,11 +501,41 @@
                 const data = await res.json();
                 if (data.success) {
                     document.getElementById('wallet-val').innerText = Number(data.new_balance).toFixed(2);
+                } else {
+                    alert("Recharge failed: " + (data.error || 'Unknown error'));
                 }
             } catch (err) {
                 alert("Recharge error: " + err);
             }
         }
-    </script>
+
+        async function rechargeCustom() {
+            const input = document.getElementById('custom-amount');
+            const val = parseFloat(input.value);
+            if (isNaN(val) || val < 50 || val > 10000) {
+                alert("Please enter a valid amount between ₹50 and ₹10,000.");
+                return;
+            }
+            await recharge(val);
+            input.value = '';
+        }
+
+        async function toggleTag(tagId) {
+            try {
+                const res = await fetch('/api/tag/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tag_id: tagId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("Error updating tag: " + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert("Network error: " + err);
+            }
+        }
 </body>
 </html>

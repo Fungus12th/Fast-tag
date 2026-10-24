@@ -1,0 +1,11 @@
+services:
+  fastag-server:
+    build: .
+    container_name: fastag-ddbms-server
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_SECRET_KEY=fastag-production-ddbms-key
+      - FASTAG_STORAGE_BACKEND=memory
+      - FASTAG_DEDUP_INTERVAL=30
+    restart: unless-stopped

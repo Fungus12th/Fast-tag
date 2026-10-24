@@ -897,50 +897,51 @@
         });
     }
 
-    // ──────────────── POLLING ────────────────
+    // ──────────────── POLLING & SSE ────────────────
+    function applyStatsData(d) {
+        if (!d) return;
+        counters.totalPings.target   = d.total_raw_pings || 0;
+        counters.totalJourneys.target = d.total_deduplicated_journeys || 0;
+        counters.dedupRatio.target    = d.dedup_ratio || 0;
+        counters.pps.target           = d.pings_per_second || 0;
+
+        if (d.last_raw_count > 0 && d.last_journey_count >= 0) {
+            document.getElementById('hero-pings-sub').textContent = 'last window: ' + d.last_raw_count.toLocaleString();
+            document.getElementById('hero-journeys-sub').textContent = 'last run: ' + d.last_journey_count.toLocaleString();
+        }
+
+        if (dedupGaugeChart) {
+            if (!d.last_dedup_run) {
+                dedupGaugeChart.data.datasets[0].data = [0, 1];
+                dedupGaugeChart.data.datasets[0].backgroundColor = ['#e2e8f0', '#0284c7'];
+                document.getElementById('gauge-ratio').textContent = '—';
+                document.getElementById('gauge-sublabel').textContent = 'Awaiting first dedup run…';
+            } else {
+                const ratio = d.dedup_ratio || 0;
+                dedupGaugeChart.data.datasets[0].data = [ratio, Math.max(0.5, 100 - ratio)];
+                dedupGaugeChart.data.datasets[0].backgroundColor = ['#0284c7', '#cbd5e1'];
+                document.getElementById('gauge-ratio').textContent = ratio.toFixed(1) + '%';
+                document.getElementById('gauge-sublabel').textContent =
+                    (d.last_raw_count || 0).toLocaleString() + ' raw → ' +
+                    (d.last_journey_count || 0).toLocaleString() + ' journeys';
+            }
+            dedupGaugeChart.update();
+        }
+
+        document.getElementById('status-last-dedup').textContent = formatTime(d.last_dedup_run);
+
+        if (d.last_dedup_run && d.last_dedup_run !== lastDedupRunAt) {
+            if (lastDedupRunAt !== null) playKaChing();
+            lastDedupRunAt = d.last_dedup_run;
+        }
+    }
+
     async function pollStats() {
         try {
             const res = await fetch('/api/stats');
             if (!res.ok) return;
             const d = await res.json();
-
-            counters.totalPings.target   = d.total_raw_pings || 0;
-            counters.totalJourneys.target = d.total_deduplicated_journeys || 0;
-            counters.dedupRatio.target    = d.dedup_ratio || 0;
-            counters.pps.target           = d.pings_per_second || 0;
-
-            if (d.last_raw_count > 0 && d.last_journey_count >= 0) {
-                document.getElementById('hero-pings-sub').textContent = 'last window: ' + d.last_raw_count.toLocaleString();
-                document.getElementById('hero-journeys-sub').textContent = 'last run: ' + d.last_journey_count.toLocaleString();
-            }
-
-            if (dedupGaugeChart) {
-                if (!d.last_dedup_run) {
-                    dedupGaugeChart.data.datasets[0].data = [0, 1];
-                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#e2e8f0', '#0284c7'];
-                    document.getElementById('gauge-ratio').textContent = '—';
-                    document.getElementById('gauge-sublabel').textContent = 'Awaiting first dedup run…';
-                } else {
-                    const ratio = d.dedup_ratio || 0;
-                    dedupGaugeChart.data.datasets[0].data = [ratio, Math.max(0.5, 100 - ratio)];
-                    dedupGaugeChart.data.datasets[0].backgroundColor = ['#0284c7', '#cbd5e1'];
-                    document.getElementById('gauge-ratio').textContent = ratio.toFixed(1) + '%';
-                    document.getElementById('gauge-sublabel').textContent =
-                        (d.last_raw_count || 0).toLocaleString() + ' raw → ' +
-                        (d.last_journey_count || 0).toLocaleString() + ' journeys';
-                }
-                dedupGaugeChart.update();
-            }
-
-            const chaosActive = !!d.chaos_mode;
-
-            document.getElementById('status-last-dedup').textContent = formatTime(d.last_dedup_run);
-
-            if (d.last_dedup_run && d.last_dedup_run !== lastDedupRunAt) {
-                if (lastDedupRunAt !== null) playKaChing();
-                lastDedupRunAt = d.last_dedup_run;
-            }
-
+            applyStatsData(d);
         } catch (e) {}
     }
 
@@ -1109,10 +1110,28 @@
     }
 
     function startPolling() {
-        (function loopStats() { pollStats().finally(() => setTimeout(loopStats, POLL_STATS_MS)); })();
+        // Task 3.6: Server-Sent Events (SSE) with graceful polling fallback
+        if (window.EventSource) {
+            try {
+                const sse = new EventSource('/api/stream');
+                sse.onmessage = function(e) {
+                    try {
+                        const d = JSON.parse(e.data);
+                        applyStatsData(d);
+                    } catch(err) {}
+                };
+                sse.onerror = function() {
+                    setTimeout(pollStats, 2000);
+                };
+            } catch(e) {
+                (function loopStats() { pollStats().finally(() => setTimeout(loopStats, POLL_STATS_MS)); })();
+            }
+        } else {
+            (function loopStats() { pollStats().finally(() => setTimeout(loopStats, POLL_STATS_MS)); })();
+        }
+
         (function loopThroughput() { pollThroughput().finally(() => setTimeout(loopThroughput, POLL_THROUGHPUT_MS)); })();
         (function loopPlaza() { pollPlaza().finally(() => setTimeout(loopPlaza, POLL_PLAZA_MS)); })();
-        
         (function loopHealth() { pollHealth().finally(() => setTimeout(loopHealth, POLL_HEALTH_MS)); })();
     }
 

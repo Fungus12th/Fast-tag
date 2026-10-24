@@ -26,6 +26,7 @@ data/nodes/*.db*
 # Logs & Session Test Artifacts
 *.log
 cookies*.txt
+.pytest_cache/
 .DS_Store
 Thumbs.db
 .idea/

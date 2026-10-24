@@ -780,3 +780,118 @@ def toggle_rfid_tag_status(user_id: int, tag_id: str) -> dict:
         pass
 
     return {"success": True, "tag_id": tag_id, "new_status": new_status}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Real-Time Security & Operational Error Log Engine
+# ─────────────────────────────────────────────────────────────────────────────
+def get_security_error_logs(limit=100, alert_type=None):
+    """
+    Retrieves real-time operational and security alert logs from fastag_ledger.db:
+    - Impossible travel tag cloning fraud
+    - Insufficient wallet balance failures
+    - Blocked / blacklisted tag passage attempts
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Get summary counts
+    cur.execute("""
+        SELECT 
+            COUNT(*) as total_alerts,
+            SUM(CASE WHEN failure_reason LIKE '%Cloning%' THEN 1 ELSE 0 END) as cloning_alerts,
+            SUM(CASE WHEN failure_reason LIKE '%Insufficient%' THEN 1 ELSE 0 END) as insufficient_alerts,
+            SUM(CASE WHEN failure_reason LIKE '%BLOCKED%' OR failure_reason LIKE '%Tag %' THEN 1 ELSE 0 END) as blocked_alerts
+        FROM Journeys
+        WHERE payment_status = 'FAILED';
+    """)
+    srow = cur.fetchone()
+    summary = {
+        "total_alerts": srow["total_alerts"] or 0,
+        "cloning_alerts": srow["cloning_alerts"] or 0,
+        "insufficient_alerts": srow["insufficient_alerts"] or 0,
+        "blocked_alerts": srow["blocked_alerts"] or 0
+    }
+
+    query = """
+        SELECT 
+            j.journey_id,
+            j.tag_id,
+            j.plaza_id,
+            COALESCE(p.plaza_name, 'Plaza ' || j.plaza_id) as plaza_name,
+            COALESCE(p.region, 'UNKNOWN') as region,
+            COALESCE(p.highway_name, 'Highway') as highway_name,
+            j.timestamp,
+            j.deducted_amount,
+            j.payment_status,
+            j.failure_reason,
+            COALESCE(t.registration_no, 'Unknown') as registration_no,
+            COALESCE(v.vehicle_class, 'Car') as vehicle_class,
+            COALESCE(u.full_name, 'Unknown Owner') as owner_name,
+            COALESCE(u.phone_number, 'N/A') as phone_number
+        FROM Journeys j
+        LEFT JOIN Toll_Plazas p ON j.plaza_id = p.plaza_id
+        LEFT JOIN RFID_Tags t ON j.tag_id = t.tag_id
+        LEFT JOIN Vehicles v ON t.registration_no = v.registration_no
+        LEFT JOIN Users u ON v.user_id = u.user_id
+        WHERE j.payment_status = 'FAILED'
+    """
+    params = []
+    if alert_type == "cloning":
+        query += " AND j.failure_reason LIKE '%Cloning%'"
+    elif alert_type == "insufficient":
+        query += " AND j.failure_reason LIKE '%Insufficient%'"
+    elif alert_type == "blocked":
+        query += " AND (j.failure_reason LIKE '%BLOCKED%' OR j.failure_reason LIKE '%Tag %')"
+
+    query += " ORDER BY j.journey_id DESC LIMIT ?;"
+    params.append(limit)
+
+    cur.execute(query, tuple(params))
+    rows = cur.fetchall()
+    conn.close()
+
+    alerts = []
+    for r in rows:
+        reason = r["failure_reason"] or "Transaction Rejected"
+        if "Cloning" in reason:
+            cat = "TAG_CLONING_FRAUD"
+            severity = "CRITICAL"
+            action = "🚨 Gate Barred · Zero Deducted · Fraud Audit Flagged"
+        elif "Insufficient" in reason:
+            cat = "INSUFFICIENT_BALANCE"
+            severity = "WARNING"
+            action = "⚠️ Gate Held · Zero Deducted · User Alert Dispatched"
+        elif "BLOCKED" in reason or "Tag " in reason:
+            cat = "BLOCKED_TAG"
+            severity = "DANGER"
+            action = "🛑 Gate Locked · Impound Alert Notified"
+        else:
+            cat = "OPERATIONAL_FAILURE"
+            severity = "INFO"
+            action = "Audit Logged"
+
+        alerts.append({
+            "journey_id": r["journey_id"],
+            "timestamp": r["timestamp"],
+            "tag_id": r["tag_id"],
+            "registration_no": r["registration_no"],
+            "vehicle_class": r["vehicle_class"],
+            "owner_name": r["owner_name"],
+            "phone_number": r["phone_number"],
+            "plaza_id": r["plaza_id"],
+            "plaza_name": r["plaza_name"],
+            "region": r["region"],
+            "highway_name": r["highway_name"],
+            "failure_reason": reason,
+            "category": cat,
+            "severity": severity,
+            "action_taken": action
+        })
+
+    return {
+        "summary": summary,
+        "alerts": alerts,
+        "count": len(alerts)
+    }
+

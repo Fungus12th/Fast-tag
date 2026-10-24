@@ -469,6 +469,26 @@ def ddbms_view():
     catalog = ddbms_manager.get_ddbms_catalog()
     return render_template("ddbms_architecture.html", catalog=catalog, user=user)
 
+@app.route("/error_log")
+def error_log_view():
+    """Security & Operational Alert Log (Admin & City Engineers)."""
+    user = get_current_user()
+    if not user or user["role"] == "user":
+        return redirect("/")
+    logs = sql_ledger.get_security_error_logs(limit=100)
+    return render_template("error_log.html", logs=logs, user=user)
+
+@app.route("/api/error_log")
+def api_error_log():
+    """Returns live JSON of failed journeys and security alerts for real-time polling."""
+    alert_type = request.args.get("type")
+    try:
+        limit = int(request.args.get("limit", 100))
+    except (ValueError, TypeError):
+        limit = 100
+    logs = sql_ledger.get_security_error_logs(limit=limit, alert_type=alert_type)
+    return jsonify(logs)
+
 @app.route("/api/ddbms/catalog")
 def api_ddbms_catalog():
     """Returns live distributed fragmentation catalog metadata."""

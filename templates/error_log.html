@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FASTag — Security &amp; Operational Error Log</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/theme.css">
+    <style>
+        .page { max-width: 1440px; margin: 0 auto; padding: 18px 24px 48px; }
+        .brand { font: 700 1.05rem var(--font-display); color: var(--primary); white-space: nowrap; }
+        .banner { padding: 28px 30px; margin-bottom: 22px; background: linear-gradient(115deg, var(--surface) 0%, #f0f9ff 100%); }
+        .eyebrow, .section-kicker { color: var(--primary); font: 700 .75rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+        .banner h1 { font: 700 clamp(1.55rem, 3vw, 2.35rem) var(--font-display); letter-spacing: -.035em; margin: 6px 0 9px; }
+        .banner p { color: var(--text-muted); max-width: 900px; }
+        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 26px; }
+        .metric { padding: 20px; position: relative; overflow: hidden; }
+        .metric::after { content: ''; position: absolute; right: -22px; bottom: -34px; width: 90px; height: 90px; border-radius: 50%; background: var(--primary-soft); }
+        .metric-label { color: var(--text-muted); font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .045em; }
+        .metric-value { display: block; color: var(--primary); font: 700 2rem var(--font-display); line-height: 1.1; margin-top: 9px; position: relative; z-index: 1; }
+        .metric:nth-child(2) .metric-value { color: var(--danger); }
+        .metric:nth-child(3) .metric-value { color: var(--warning); }
+        .metric:nth-child(4) .metric-value { color: #b91c1c; }
+        .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 13px; }
+        .section-heading h2 { font: 700 1.35rem var(--font-display); margin-top: 3px; }
+        .section-heading p { color: var(--text-muted); font-size: .88rem; }
+        .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 13px 15px; margin-bottom: 12px; }
+        .chip { border: 1px solid var(--border); background: var(--surface-alt); color: var(--text-muted); border-radius: var(--radius-pill); padding: 8px 13px; cursor: pointer; font: 600 .8rem var(--font-body); transition: all 150ms ease; }
+        .chip:hover, .chip.active { color: var(--primary); background: var(--primary-soft); border-color: rgba(2,132,199,.3); }
+        .toolbar-spacer { flex: 1; }
+        .live { display: inline-flex; align-items: center; gap: 6px; color: var(--success); font: 600 .78rem var(--font-mono); white-space: nowrap; }
+        .live-dot { animation: pulse 1.5s infinite; }
+        .refresh { padding: 8px 13px; }
+        .table-wrap { max-height: 620px; overflow: auto; }
+        .saas-table { min-width: 1060px; }
+        .saas-table td { vertical-align: top; }
+        .mono { font-family: var(--font-mono); font-size: .78rem; }
+        .primary-text { font-weight: 600; }
+        .secondary-text { display: block; color: var(--text-muted); font-size: .78rem; margin-top: 3px; }
+        .severity-critical, .severity-danger { background: var(--danger-bg); color: #b91c1c; border-color: rgba(220,38,38,.2); }
+        .severity-warning { background: var(--warning-bg); color: #b45309; border-color: rgba(217,119,6,.2); }
+        .severity-info { background: var(--primary-soft); color: var(--primary); border-color: rgba(2,132,199,.2); }
+        .empty td { text-align: center; color: var(--text-muted); padding: 34px; }
+        .row-enter { animation: row-in 300ms ease both; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+        @keyframes row-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) { .metrics { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 700px) { .page { padding: 12px 14px 35px; } .metrics { grid-template-columns: 1fr; } .saas-nav { align-items: start; } .toolbar-spacer { display: none; } }
+    </style>
+</head>
+<body>
+<main class="page">
+    <nav class="saas-nav" aria-label="Primary navigation">
+        <div class="brand">⚡ FASTag Control Plane</div>
+        <div class="saas-nav-links">
+            <a class="saas-nav-link" href="/dashboard">Live Dashboard</a>
+            <a class="saas-nav-link" href="/sql_ledger">3NF SQL Ledger</a>
+            <a class="saas-nav-link" href="/sql_console">SQL Console</a>
+            <a class="saas-nav-link" href="/ddbms">🌐 DDBMS Architecture</a>
+            <a class="saas-nav-link active" href="/error_log">⚠️ Security Alerts</a>
+            <a class="saas-nav-link" href="/batch_output">Batch Output</a>
+            <a class="saas-nav-link" href="/summary">Summary</a>
+            <a class="saas-nav-link" href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <header class="saas-card banner">
+        <div class="eyebrow">Security operations · live audit stream</div>
+        <h1>🚨 FASTag Security &amp; Operational Error Log</h1>
+        <p>Real-Time Threat Detection, Impossible Travel Spatiotemporal Violations &amp; ACID Failure Audits</p>
+    </header>
+
+    <section aria-label="Alert summary">
+        <div class="metrics">
+            <article class="saas-card metric"><span class="metric-label">Total Alerts</span><strong class="metric-value" id="stat-total">{{ logs.summary.total_alerts }}</strong></article>
+            <article class="saas-card metric"><span class="metric-label">Suspected Tag Cloning Fraud</span><strong class="metric-value" id="stat-cloning">{{ logs.summary.cloning_alerts }}</strong></article>
+            <article class="saas-card metric"><span class="metric-label">Insufficient Balance Failures</span><strong class="metric-value" id="stat-insufficient">{{ logs.summary.insufficient_alerts }}</strong></article>
+            <article class="saas-card metric"><span class="metric-label">Blocked Tag Rejections</span><strong class="metric-value" id="stat-blocked">{{ logs.summary.blocked_alerts }}</strong></article>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-heading"><div><div class="section-kicker">Audit stream · ACID failure events</div><h2>Security &amp; Operational Alerts</h2></div><p id="last-updated">Awaiting live update…</p></div>
+        <div class="saas-card toolbar" role="toolbar" aria-label="Alert filters">
+            <button class="chip active" type="button" data-filter="">All Alerts</button>
+            <button class="chip" type="button" data-filter="cloning">🚨 Tag Cloning Fraud</button>
+            <button class="chip" type="button" data-filter="insufficient">⚠️ Insufficient Balance</button>
+            <button class="chip" type="button" data-filter="blocked">🛑 Blocked Tags</button>
+            <span class="toolbar-spacer"></span><span class="live"><span class="live-dot">●</span> Live Polling Active (2.5s)</span>
+            <button class="saas-btn saas-btn-secondary refresh" id="refresh-btn" type="button">↻ Refresh</button>
+        </div>
+        <div class="saas-card table-wrap"><table class="saas-table"><thead><tr><th>Alert Time</th><th>Severity</th><th>Tag ID</th><th>Vehicle &amp; Owner</th><th>Plaza &amp; Region</th><th>Failure Reason / Threat Detail</th><th>Action Enforced</th></tr></thead>
+            <tbody id="alerts-body">
+            {% for alert in logs.alerts %}
+                <tr class="row-enter"><td class="mono">{{ alert.timestamp }}</td><td><span class="saas-badge severity-{{ alert.severity|lower }}">{{ alert.severity }}</span></td><td class="mono primary-text">{{ alert.tag_id }}</td><td><span class="primary-text">{{ alert.registration_no }}</span><span class="secondary-text">{{ alert.vehicle_class }} · {{ alert.owner_name }}</span></td><td><span class="primary-text">{{ alert.plaza_name }}</span><span class="secondary-text">{{ alert.region }} · {{ alert.highway_name }}</span></td><td>{{ alert.failure_reason }}<span class="secondary-text mono">Journey #{{ alert.journey_id }}</span></td><td>{{ alert.action_taken }}</td></tr>
+            {% else %}
+                <tr class="empty"><td colspan="7">No security or operational alerts recorded.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+    </section>
+</main>
+<script>
+(() => {
+    let activeFilter = '';
+    const body = document.getElementById('alerts-body');
+    const escapeText = value => value == null || value === '' ? '—' : String(value);
+    const cell = (value, className = '') => { const td = document.createElement('td'); td.className = className; td.textContent = escapeText(value); return td; };
+    const dualCell = (primary, secondary) => { const td = document.createElement('td'); const first = document.createElement('span'); first.className = 'primary-text'; first.textContent = escapeText(primary); const second = document.createElement('span'); second.className = 'secondary-text'; second.textContent = escapeText(secondary); td.append(first, second); return td; };
+    function renderAlerts(alerts) {
+        const fragment = document.createDocumentFragment();
+        if (!alerts.length) { const row = document.createElement('tr'); row.className = 'empty'; row.appendChild(cell('No alerts match this filter.')); row.firstChild.colSpan = 7; fragment.appendChild(row); }
+        alerts.forEach(alert => {
+            const row = document.createElement('tr'); row.className = 'row-enter';
+            row.append(cell(alert.timestamp, 'mono'));
+            const severity = document.createElement('td'); const badge = document.createElement('span'); badge.className = `saas-badge severity-${String(alert.severity || 'info').toLowerCase()}`; badge.textContent = escapeText(alert.severity); severity.appendChild(badge); row.appendChild(severity);
+            row.append(cell(alert.tag_id, 'mono primary-text'));
+            row.append(dualCell(alert.registration_no, `${escapeText(alert.vehicle_class)} · ${escapeText(alert.owner_name)}`));
+            row.append(dualCell(alert.plaza_name, `${escapeText(alert.region)} · ${escapeText(alert.highway_name)}`));
+            row.append(dualCell(alert.failure_reason, `Journey #${escapeText(alert.journey_id)}`));
+            row.append(cell(alert.action_taken)); fragment.appendChild(row);
+        });
+        body.replaceChildren(fragment);
+    }
+    function updateSummary(summary) { [['stat-total','total_alerts'], ['stat-cloning','cloning_alerts'], ['stat-insufficient','insufficient_alerts'], ['stat-blocked','blocked_alerts']].forEach(([id, key]) => { document.getElementById(id).textContent = summary[key] ?? 0; }); }
+    async function poll() { try { const response = await fetch(`/api/error_log?limit=100${activeFilter ? `&type=${encodeURIComponent(activeFilter)}` : ''}`, { cache: 'no-store' }); if (!response.ok) return; const result = await response.json(); updateSummary(result.summary || {}); renderAlerts(result.alerts || []); document.getElementById('last-updated').textContent = `Last synchronized ${new Date().toLocaleTimeString()}`; } catch (_) {} }
+    document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => { activeFilter = button.dataset.filter; document.querySelectorAll('[data-filter]').forEach(item => item.classList.toggle('active', item === button)); poll(); }));
+    document.getElementById('refresh-btn').addEventListener('click', poll);
+    poll(); setInterval(poll, 2500);
+})();
+</script>
+</body>
+</html>
